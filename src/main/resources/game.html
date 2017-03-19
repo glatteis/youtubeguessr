@@ -19,7 +19,7 @@
 
 <button id="start_button" onclick="startClicked()">Start Game</button>
 
-<form hidden="hidden" id="guess_form" method="POST" action="/guess">
+<form hidden="hidden" id="guess_form" action="javascript:;" onsubmit="guessSubmitted(this)">
     <label>
         Your guess:
         <input type="number" name="views">
@@ -27,6 +27,13 @@
     <input type="submit">
     <label id="countdown_label"></label>
 </form>
+
+<div id="results" hidden="hidden">
+    <table id="guess_table">
+    </table>
+    <p id="actual_count"></p>
+</div>
+
 
 </body>
 <script type="text/javascript">
@@ -55,6 +62,7 @@
             }
         }
         if (data.type == "newVideo") {
+            document.getElementById("results").setAttribute("hidden", "hidden");
             document.getElementById("start_button").setAttribute("hidden", "hidden");
             document.getElementById("guess_form").removeAttribute("hidden");
             var url = data.url;
@@ -66,6 +74,20 @@
         if (data.type == "updateCountdown") {
             document.getElementById("countdown_label").innerHTML = data.countdown
         }
+        if (data.type == "score") {
+            document.getElementById("results").removeAttribute("hidden");
+            var guesses = data.guesses;
+            var guessTable = document.getElementById("guess_table");
+            guessTable.innerHTML = "";
+            Object.keys(guesses).forEach(function (username) {
+                var guess = guesses[username];
+                if (username == data.closestUser) {
+                    name += " 👑";
+                }
+                guessTable.innerHTML += "<tr><td>" + username + "</td><td>" + guess.toString() + "</td></tr>";
+            });
+            document.getElementById("actual_count").innerHTML = "Actual views: " + data.viewcount;
+        }
     };
 
     webSocket.onclose = function () {  };
@@ -73,6 +95,14 @@
     function startClicked() {
         webSocket.send(JSON.stringify(
             {"type": "start"}
+        ))
+    }
+
+    function guessSubmitted(form) {
+        var views = form.views.value;
+        form.views.value = null;
+        webSocket.send(JSON.stringify(
+            {"type": "guess", "views": views}
         ))
     }
 

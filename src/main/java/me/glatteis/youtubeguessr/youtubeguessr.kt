@@ -6,7 +6,6 @@ import spark.template.mustache.MustacheTemplateEngine
 import java.util.*
 
 val games = HashMap<String, Game>()
-val random = Random()
 val mustacheTemplateEngine = MustacheTemplateEngine()
 
 fun main(args: Array<String>) {
@@ -56,5 +55,4 @@ fun main(args: Array<String>) {
         }
         ""
     })
-    
 }

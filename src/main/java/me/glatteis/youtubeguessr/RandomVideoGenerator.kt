@@ -15,13 +15,15 @@ import java.util.*
 object RandomVideoGenerator {
 
     val urlStart = "https://www.googleapis.com/youtube/v3/search?part=id&maxResults=1&type=video&q="
-    val urlEnd = "&key=AIzaSyCvAthOGvbUcWN6NfH8Oj4awnEvbtKk0Js"
-
-    fun generateRandomVideo(): String {
+    val urlViews = "https://www.googleapis.com/youtube/v3/videos?part=statistics&id="
+    val key = "&key=AIzaSyCvAthOGvbUcWN6NfH8Oj4awnEvbtKk0Js"
+    
+    fun generateRandomVideo(): Pair<String, Int> {
         var foundVideo: String? = null
+        var viewCount: Int? = null
         do {
             val randomString = RandomStringGenerator.randomString(4)
-            val url = URL(urlStart + randomString + urlEnd)
+            val url = URL(urlStart + randomString + key)
             val urlConnection = url.openConnection()
             val reader = Scanner(
                     InputStreamReader(urlConnection.getInputStream()))
@@ -32,8 +34,21 @@ object RandomVideoGenerator {
             reader.close()
             val json = JSONObject(text)
             foundVideo = json.getJSONArray("items")?.getJSONObject(0)?.getJSONObject("id")?.getString("videoId")
-        } while (foundVideo == null)
-        return foundVideo
+
+            val urlV = URL(urlViews + foundVideo + key)
+            val urlConnectionV = urlV.openConnection()
+            val readerV = Scanner(
+                    InputStreamReader(urlConnectionV.getInputStream()))
+            var textV = ""
+            while (readerV.hasNextLine()) {
+                textV += readerV.nextLine()
+            }
+            readerV.close()
+            val jsonV = JSONObject(textV)
+            viewCount = jsonV.getJSONArray("items")?.getJSONObject(0)?.getJSONObject("statistics")?.getString("viewCount")?.toInt()
+            
+        } while (foundVideo == null || viewCount == null)
+        return Pair(foundVideo, viewCount)
     }
 
 }
