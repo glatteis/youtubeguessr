@@ -26,6 +26,7 @@
     </label>
     <input type="submit">
     <label id="countdown_label"></label>
+    <label id="current_guess"></label>
 </form>
 
 <div id="results" hidden="hidden">
@@ -62,17 +63,18 @@
             }
         }
         if (data.type == "newVideo") {
+            document.getElementById("current_guess").innerHTML = "";
             document.getElementById("results").setAttribute("hidden", "hidden");
             document.getElementById("start_button").setAttribute("hidden", "hidden");
             document.getElementById("guess_form").removeAttribute("hidden");
             var url = data.url;
             if (url != null) {
                 document.getElementById("video").setAttribute("src",
-                    "//www.youtube.com/embed/" + url + "?modestbranding=1&autohide=1&showinfo=0&controls=0&autoplay=1&rel=0&disablekb=1&fs=0&loop=1")
+                    "//www.youtube.com/embed/" + url + "?modestbranding=1&autohide=1&showinfo=0&controls=0&autoplay=1&rel=0&disablekb=1&fs=0&loop=1");
             }
         }
         if (data.type == "updateCountdown") {
-            document.getElementById("countdown_label").innerHTML = data.countdown
+            document.getElementById("countdown_label").innerHTML = "Time: " + data.countdown.toString();
         }
         if (data.type == "score") {
             document.getElementById("results").removeAttribute("hidden");
@@ -82,15 +84,13 @@
             Object.keys(guesses).forEach(function (username) {
                 var guess = guesses[username];
                 if (username == data.closestUser) {
-                    name += " 👑";
+                    username += " 👑";
                 }
                 guessTable.innerHTML += "<tr><td>" + username + "</td><td>" + guess.toString() + "</td></tr>";
             });
             document.getElementById("actual_count").innerHTML = "Actual views: " + data.viewcount;
         }
     };
-
-    webSocket.onclose = function () {  };
 
     function startClicked() {
         webSocket.send(JSON.stringify(
@@ -103,7 +103,8 @@
         form.views.value = null;
         webSocket.send(JSON.stringify(
             {"type": "guess", "views": views}
-        ))
+        ));
+        document.getElementById("current_guess").innerHTML = "Current Guess: " + views.toString();
     }
 
 </script>

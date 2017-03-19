@@ -1,5 +1,6 @@
 package me.glatteis.youtubeguessr
 
+import org.eclipse.jetty.util.ConcurrentHashSet
 import org.eclipse.jetty.websocket.api.annotations.OnWebSocketClose
 import org.eclipse.jetty.websocket.api.annotations.OnWebSocketMessage
 import org.eclipse.jetty.websocket.api.annotations.WebSocket
@@ -19,9 +20,9 @@ import org.eclipse.jetty.websocket.api.Session as JSession
  */
 class Game(val name: String, val id: String) {
 
-    val users = HashSet<User>()
-    val userSessions = HashMap<User, JSession>()
-    val guesses = HashMap<User, Int>()
+    val users = ConcurrentHashSet<User>()
+    val userSessions = ConcurrentHashMap<User, JSession>()
+    val guesses = ConcurrentHashMap<User, Int>()
 
     fun getGame(request: Request, response: Response): ModelAndView {
         val username: String? = request.session().attribute("username")
@@ -54,7 +55,9 @@ class Game(val name: String, val id: String) {
             if (!hasStarted || countdown == 0) return
             val viewsString = message.getString("views")
             if (viewsString.isBlank()) return
+            if (viewsString.length >= Int.MAX_VALUE.toString().length) return
             val views = viewsString.toInt()
+            if (views < 0) return
             for ((u, s) in userSessions) {
                 if (s == session) {
                     guesses.put(u, views)
@@ -92,7 +95,7 @@ class Game(val name: String, val id: String) {
                 )
         ))
         countdown = 30
-        timer(initialDelay = 1000, period = 1000) {
+        timer(initialDelay = 1000, period = 1000, daemon = true) {
             countdown--
             GameWebSocketHandler.sendToAll(userSessions.values, JSONObject(
                     mapOf(
@@ -104,6 +107,7 @@ class Game(val name: String, val id: String) {
                 this.cancel()
                 if (guesses.isEmpty()) {
                     postVideo()
+                    return@timer
                 }
                 var closestUser = guesses.keys.first()
                 for (u in users) {
@@ -133,7 +137,6 @@ class Game(val name: String, val id: String) {
             }
         }
     }
-
 }
 
 class User(val name: String, var points: Int)
@@ -220,8 +223,8 @@ object GameWebSocketHandler {
     }
 
     fun sendToAll(sessions: Iterable<JSession>, message: JSONObject) {
-        for (s in sessions) {
-            GameWebSocketHandler.sendMessage(s, message)
+        sessions.forEach {
+            GameWebSocketHandler.sendMessage(it, message)
         }
     }
 

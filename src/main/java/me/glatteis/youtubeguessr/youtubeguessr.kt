@@ -9,6 +9,7 @@ val games = HashMap<String, Game>()
 val mustacheTemplateEngine = MustacheTemplateEngine()
 
 fun main(args: Array<String>) {
+    port(25565)
     webSocket("/gamesocket", GameWebSocketHandler)
     staticFileLocation("/")
     get("/", { request, response ->
