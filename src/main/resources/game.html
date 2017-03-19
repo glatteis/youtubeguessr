@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>YoutubeGuessr</title>
+    <link rel="stylesheet" href="youtubeguessr.css">
+</head>
+<body>
+<h3>{{game_name}}</h3>
+<table id="user_table">
+</table>
+
+<div id="viddiv">
+    <iframe width="810" height="540"
+            src="//www.youtube.com/embed/?modestbranding=1&autohide=1&showinfo=0&controls=0&autoplay=1&rel=0
+             &disablekb=1&fs=0&loop=1"
+            frameborder="0" id="video"></iframe>
+</div>
+
+<button id="start_button" onclick="startClicked()">Start Game</button>
+
+<form hidden="hidden" id="guess_form" method="POST" action="/guess">
+    <label>
+        Your guess:
+        <input type="number" name="views">
+    </label>
+    <input type="submit">
+    <label id="countdown_label"></label>
+</form>
+
+</body>
+<script type="text/javascript">
+    var id = "{{game_id}}";
+    var username = "{{username}}";
+    var webSocket = new WebSocket("ws://" + location.hostname + ":" + location.port + "/gamesocket");
+    webSocket.onopen = function () {
+        webSocket.send(JSON.stringify(
+            {type: "connect", id: id, username: username}
+        ))
+    };
+
+    webSocket.onmessage = function(message) {
+        var data = JSON.parse(message.data);
+        if (data.users != undefined) {
+            var users = data.users;
+            var userTable = document.getElementById("user_table");
+            userTable.innerHTML = "";
+            for (var i = 0; i < users.length; i++) {
+                var user = users[i];
+                var name = user.name;
+                if (name == data.username) {
+                    name += " *";
+                }
+                userTable.innerHTML += "<tr><td>" + name + "</td><td>" + user.points.toString() + "</td></tr>";
+            }
+        }
+        if (data.type == "newVideo") {
+            document.getElementById("start_button").setAttribute("hidden", "hidden");
+            document.getElementById("guess_form").removeAttribute("hidden");
+            var url = data.url;
+            if (url != null) {
+                document.getElementById("video").setAttribute("src",
+                    "//www.youtube.com/embed/" + url + "?modestbranding=1&autohide=1&showinfo=0&controls=0&autoplay=1&rel=0&disablekb=1&fs=0&loop=1")
+            }
+        }
+        if (data.type == "updateCountdown") {
+            document.getElementById("countdown_label").innerHTML = data.countdown
+        }
+    };
+
+    webSocket.onclose = function () {  };
+
+    function startClicked() {
+        webSocket.send(JSON.stringify(
+            {"type": "start"}
+        ))
+    }
+
+</script>
+</html>
