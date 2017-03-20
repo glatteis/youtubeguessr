@@ -1,12 +1,14 @@
 package me.glatteis.youtubeguessr
 
-import jdk.nashorn.internal.parser.JSONParser
-import jdk.nashorn.internal.runtime.ScriptingFunctions.readLine
+import org.json.JSONException
 import org.json.JSONObject
 import java.io.InputStreamReader
-import java.io.BufferedReader
 import java.net.URL
+import java.security.SecureRandom
+import java.text.SimpleDateFormat
+import java.time.Duration
 import java.util.*
+import javax.xml.datatype.DatatypeFactory
 
 
 /**
@@ -14,41 +16,65 @@ import java.util.*
  */
 object RandomVideoGenerator {
 
-    val urlStart = "https://www.googleapis.com/youtube/v3/search?part=id&maxResults=1&type=video&q="
+    val urlStart = "https://www.googleapis.com/youtube/v3/search?part=id&maxResults=50&type=video&videoSyndicated=true&q="
     val urlViews = "https://www.googleapis.com/youtube/v3/videos?part=statistics&id="
+    val urlDuration = "https://www.googleapis.com/youtube/v3/videos?part=contentDetails&id="
     val key = "&key=AIzaSyCvAthOGvbUcWN6NfH8Oj4awnEvbtKk0Js"
-    
-    fun generateRandomVideo(): Pair<String, Int> {
-        var foundVideo: String? = null
-        var viewCount: Int? = null
-        do {
-            val randomString = RandomStringGenerator.randomString(4)
-            val url = URL(urlStart + randomString + key)
-            val urlConnection = url.openConnection()
-            val reader = Scanner(
-                    InputStreamReader(urlConnection.getInputStream()))
-            var text = ""
-            while (reader.hasNextLine()) {
-                text += reader.nextLine()
-            }
-            reader.close()
-            val json = JSONObject(text)
-            foundVideo = json.getJSONArray("items")?.getJSONObject(0)?.getJSONObject("id")?.getString("videoId")
 
-            val urlV = URL(urlViews + foundVideo + key)
-            val urlConnectionV = urlV.openConnection()
-            val readerV = Scanner(
-                    InputStreamReader(urlConnectionV.getInputStream()))
-            var textV = ""
-            while (readerV.hasNextLine()) {
-                textV += readerV.nextLine()
+    val random = SecureRandom()
+
+    val numGeneratedChars = 5
+
+    fun generateRandomVideo(): Video {
+        var foundVideo: String?
+        var viewCount: Int?
+        var duration: String?
+        do {
+            println("Generating...")
+            foundVideo = null
+            viewCount = null
+            duration = null
+            try {
+                val randomString = RandomStringGenerator.randomString(numGeneratedChars, random = random)
+                val json = grabResult(URL(urlStart + randomString + key))
+                if (json.getJSONArray("items").length() < 1) {
+                    continue
+                }
+                foundVideo = json.getJSONArray("items").getJSONObject(
+                        random.nextInt(json.getJSONArray("items").length())
+                ).getJSONObject("id").getString("videoId")
+
+                val jsonV = grabResult(URL(urlViews + foundVideo + key))
+                viewCount = jsonV.getJSONArray("items").getJSONObject(0).getJSONObject("statistics").getString("viewCount").toInt()
+
+                val jsonD = grabResult(URL(urlDuration + foundVideo + key))
+                println(jsonD)
+                duration = jsonD.getJSONArray("items").getJSONObject(0).getJSONObject("contentDetails").getString("duration")
+            } catch (e: JSONException) {
+                //
             }
-            readerV.close()
-            val jsonV = JSONObject(textV)
-            viewCount = jsonV.getJSONArray("items")?.getJSONObject(0)?.getJSONObject("statistics")?.getString("viewCount")?.toInt()
-            
-        } while (foundVideo == null || viewCount == null)
-        return Pair(foundVideo, viewCount)
+        } while (foundVideo == null || viewCount == null || duration == null)
+        return Video(foundVideo, viewCount, iso8601toSeconds(duration))
+    }
+
+    fun iso8601toSeconds(duration: String): Long {
+        print(duration)
+        val d = Duration.parse(duration)
+        val seconds = d.seconds
+        println(seconds)
+        return seconds
+    }
+
+    fun grabResult(url: URL): JSONObject {
+        val urlConnection = url.openConnection()
+        val reader = Scanner(
+                InputStreamReader(urlConnection.getInputStream()))
+        var text = ""
+        while (reader.hasNextLine()) {
+            text += reader.nextLine()
+        }
+        reader.close()
+        return JSONObject(text)
     }
 
 }

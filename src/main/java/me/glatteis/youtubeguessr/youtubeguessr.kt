@@ -4,8 +4,9 @@ import spark.ModelAndView
 import spark.Spark.*
 import spark.template.mustache.MustacheTemplateEngine
 import java.util.*
+import java.util.concurrent.ConcurrentHashMap
 
-val games = HashMap<String, Game>()
+val games = ConcurrentHashMap<String, Game>()
 val mustacheTemplateEngine = MustacheTemplateEngine()
 
 fun main(args: Array<String>) {

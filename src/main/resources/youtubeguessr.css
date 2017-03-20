@@ -2,6 +2,45 @@ table, th, td {
     border: 1px solid black;
 }
 
+body {
+    font-family: Arial, serif;
+}
+
+#game {
+    width: 1420px;
+    overflow: visible;
+}
+
+#left {
+    float: left;
+    width: 200px;
+    overflow: hidden;
+}
+
+#mid {
+    align-items: center;
+    margin: 0 auto;
+    width: 810px;
+    display: inline-block;
+}
+
+#chat {
+    width: 400px;
+    overflow: hidden;
+    display: inline-block;
+}
+
+#chat_window {
+    width: 350px;
+    overflow: visible;
+    background: white;
+    resize: none;
+}
+
+#chat_input {
+    width: 300px;
+}
+
 #viddiv {
     pointer-events: none;
 }

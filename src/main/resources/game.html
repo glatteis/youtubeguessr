@@ -6,10 +6,16 @@
     <link rel="stylesheet" href="youtubeguessr.css">
 </head>
 <body>
+
+<div id="game">
+
+<div id="left">
 <h3>{{game_name}}</h3>
 <table id="user_table">
 </table>
+</div>
 
+<div id="mid">
 <div id="viddiv">
     <iframe width="810" height="540"
             src="//www.youtube.com/embed/?modestbranding=1&autohide=1&showinfo=0&controls=0&autoplay=1&rel=0
@@ -24,8 +30,9 @@
         Your guess:
         <input type="number" name="views">
     </label>
-    <input type="submit">
-    <label id="countdown_label"></label>
+    <input type="submit"><br>
+    <label id="countdown_label"></label><br>
+    <label id="duration_label"></label><br>
     <label id="current_guess"></label>
 </form>
 
@@ -34,11 +41,21 @@
     </table>
     <p id="actual_count"></p>
 </div>
+</div>
 
+<div id="chat">
+    <textarea id="chat_window" readonly="readonly" wrap="soft" disabled="disabled" rows="30"></textarea>
+    <form action="javascript:;" onsubmit="chatSubmitted()">
+        <input type="text" id="chat_input">
+        <input type="submit" id="chat_submit">
+    </form>
+</div>
+
+</div>
 
 </body>
 <script type="text/javascript">
-    var id = "{{game_id}}";
+    const id = "{{game_id}}";
     var username = "{{username}}";
     var webSocket = new WebSocket("ws://" + location.hostname + ":" + location.port + "/gamesocket");
     webSocket.onopen = function () {
@@ -49,14 +66,17 @@
 
     webSocket.onmessage = function(message) {
         var data = JSON.parse(message.data);
+        if (data.username != undefined) {
+            username = data.username;
+        }
         if (data.users != undefined) {
-            var users = data.users;
-            var userTable = document.getElementById("user_table");
+            const users = data.users;
+            const userTable = document.getElementById("user_table");
             userTable.innerHTML = "";
             for (var i = 0; i < users.length; i++) {
-                var user = users[i];
+                const user = users[i];
                 var name = user.name;
-                if (name == data.username) {
+                if (name == username) {
                     name += " *";
                 }
                 userTable.innerHTML += "<tr><td>" + name + "</td><td>" + user.points.toString() + "</td></tr>";
@@ -67,6 +87,16 @@
             document.getElementById("results").setAttribute("hidden", "hidden");
             document.getElementById("start_button").setAttribute("hidden", "hidden");
             document.getElementById("guess_form").removeAttribute("hidden");
+            const time = data.duration;
+            const minutes = Math.floor(time / 60).toString();
+            const seconds = time % 60;
+            var secondsString;
+            if (seconds < 10) {
+                secondsString = "0" + seconds.toString();
+            } else {
+                secondsString = seconds.toString();
+            }
+            document.getElementById("duration_label").innerHTML = "Duration: " + minutes + ":" + secondsString;
             var url = data.url;
             if (url != null) {
                 document.getElementById("video").setAttribute("src",
@@ -78,17 +108,28 @@
         }
         if (data.type == "score") {
             document.getElementById("results").removeAttribute("hidden");
-            var guesses = data.guesses;
-            var guessTable = document.getElementById("guess_table");
+            const guesses = data.guesses;
+            const guessTable = document.getElementById("guess_table");
             guessTable.innerHTML = "";
+            const closestUsers = data.closestUsers;
             Object.keys(guesses).forEach(function (username) {
-                var guess = guesses[username];
-                if (username == data.closestUser) {
-                    username += " 👑";
+                const guess = guesses[username];
+                for (var i = 0; i < closestUsers.length; i++) {
+                    if (username == closestUsers[i]) {
+                        username += " 👑";
+                    }
                 }
                 guessTable.innerHTML += "<tr><td>" + username + "</td><td>" + guess.toString() + "</td></tr>";
             });
             document.getElementById("actual_count").innerHTML = "Actual views: " + data.viewcount;
+        }
+        if (data.type == "chatMessage") {
+            const chatMessage = data.message;
+            var dataUsername = data.senderName;
+            if (dataUsername == username) {
+                dataUsername += " *";
+            }
+            document.getElementById("chat_window").textContent += dataUsername + ": " + chatMessage + "\n";
         }
     };
 
@@ -99,12 +140,21 @@
     }
 
     function guessSubmitted(form) {
-        var views = form.views.value;
+        const views = form.views.value;
         form.views.value = null;
         webSocket.send(JSON.stringify(
             {"type": "guess", "views": views}
         ));
         document.getElementById("current_guess").innerHTML = "Current Guess: " + views.toString();
+    }
+
+    function chatSubmitted() {
+        const message = document.getElementById("chat_input").value;
+        webSocket.send(JSON.stringify(
+            {"type": "chatMessage", "message": message}
+        ));
+        document.getElementById("chat_input").value = "";
+        document.getElementById("chat_input").focus();
     }
 
 </script>

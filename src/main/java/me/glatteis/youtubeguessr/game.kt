@@ -20,9 +20,38 @@ import org.eclipse.jetty.websocket.api.Session as JSession
  */
 class Game(val name: String, val id: String) {
 
-    val users = ConcurrentHashSet<User>()
+    //todo game isn't disposed of correctly
+
     val userSessions = ConcurrentHashMap<User, JSession>()
     val guesses = ConcurrentHashMap<User, Int>()
+
+    init {
+        timer(daemon = true, initialDelay = 10000, period = 10000) {
+            val toRemove = HashSet<User>()
+            for ((u, s) in userSessions) {
+                if (!s.isOpen) {
+                    toRemove.add(u)
+                }
+            }
+            for (u in toRemove) {
+                userSessions[u]?.close()
+                userSessions.remove(u)
+            }
+            if (userSessions.isEmpty()) {
+                games.remove(name)
+                this.cancel()
+            } else {
+                for ((u, s) in userSessions.entries) {
+                    GameWebSocketHandler.sendMessage(s, JSONObject(
+                            mapOf(
+                                    Pair("users", userSessions.keys),
+                                    Pair("username", u.name)
+                            )
+                    ))
+                }
+            }
+        }
+    }
 
     fun getGame(request: Request, response: Response): ModelAndView {
         val username: String? = request.session().attribute("username")
@@ -44,8 +73,7 @@ class Game(val name: String, val id: String) {
 
     var hasStarted = false
     var countdown = 0
-    var currentVideo = ""
-    var currentVideoViews = 0
+    var currentVideo = Video("", 0, 0)
 
     fun message(message: JSONObject, session: JSession) {
         if (message.get("type") == "start") {
@@ -56,13 +84,37 @@ class Game(val name: String, val id: String) {
             val viewsString = message.getString("views")
             if (viewsString.isBlank()) return
             if (viewsString.length >= Int.MAX_VALUE.toString().length) return
-            val views = viewsString.toInt()
+            val views: Int
+            try {
+                views = viewsString.toInt()
+            } catch (e: Exception) {
+                return
+            }
             if (views < 0) return
             for ((u, s) in userSessions) {
                 if (s == session) {
                     guesses.put(u, views)
                 }
             }
+        }
+        if (message.get("type") == "chatMessage") {
+            var user: User? = null
+            for ((u, s) in userSessions) {
+                if (s == session) {
+                    user = u
+                    break
+                }
+            }
+            if (user == null) return
+            val chatMessage = message.get("message") ?: return
+            if (chatMessage !is String || chatMessage.isBlank()) return
+            GameWebSocketHandler.sendToAll(userSessions.values, JSONObject(
+                    mapOf(
+                            Pair("type", "chatMessage"),
+                            Pair("message", chatMessage),
+                            Pair("senderName", user.name)
+                    )
+            ))
         }
     }
 
@@ -71,7 +123,8 @@ class Game(val name: String, val id: String) {
             GameWebSocketHandler.sendMessage(session, JSONObject(
                     mapOf(
                             Pair("type", "newVideo"),
-                            Pair("url", currentVideo)
+                            Pair("url", currentVideo.id),
+                            Pair("duration", currentVideo.duration)
                     )
             ))
         }
@@ -80,18 +133,14 @@ class Game(val name: String, val id: String) {
     fun postVideo() {
         if (hasStarted) return
         hasStarted = true
-        if (userSessions.isEmpty()) {
-            games.remove(name)
-            return
-        }
         guesses.clear()
-        val vPair = RandomVideoGenerator.generateRandomVideo()
-        currentVideo = vPair.first
-        currentVideoViews = vPair.second
+        currentVideo = RandomVideoGenerator.generateRandomVideo()
         GameWebSocketHandler.sendToAll(userSessions.values, JSONObject(
                 mapOf(
                         Pair("type", "newVideo"),
-                        Pair("url", currentVideo)
+                        Pair("url", currentVideo.id),
+                        Pair("duration", currentVideo.duration),
+                        Pair("users", userSessions.keys)
                 )
         ))
         countdown = 30
@@ -106,33 +155,52 @@ class Game(val name: String, val id: String) {
             if (countdown == 0) {
                 this.cancel()
                 if (guesses.isEmpty()) {
-                    postVideo()
+                    hasStarted = false
+                    if (!games.contains(this@Game)) {
+                        this@timer.cancel()
+                    } else {
+                        postVideo()
+                    }
                     return@timer
                 }
-                var closestUser = guesses.keys.first()
-                for (u in users) {
-                    if (guesses[u] != null && abs(guesses[u]!! - currentVideoViews) <
-                            abs(guesses[closestUser]!! - currentVideoViews)) {
-                        closestUser = u
+                val closestUsers = mutableListOf(guesses.keys.first())
+                for (u in userSessions.keys) {
+                    if (guesses[u] == null || closestUsers.contains(u)) continue
+                    val g1 = abs(guesses[u]!! - currentVideo.views)
+                    val g2 = abs(guesses[closestUsers[0]]!! - currentVideo.views)
+                    if (g1 < g2) {
+                        closestUsers.clear()
+                        closestUsers.add(u)
+                    } else if (g1 == g2) {
+                        closestUsers.add(u)
                     }
                 }
-                closestUser.points++
+                for (c in closestUsers) {
+                    c.points++
+                }
                 val shownGuesses = HashMap<String, Int>()
                 for ((u, g) in guesses) {
                     shownGuesses.put(u.name, g)
+                }
+                val closestUsernames = Array(closestUsers.size) {
+                    closestUsers[it].name
                 }
                 GameWebSocketHandler.sendToAll(userSessions.values, JSONObject(
                         mapOf(
                                 Pair("type", "score"),
                                 Pair("guesses", shownGuesses),
-                                Pair("closestUser", closestUser.name),
-                                Pair("viewcount", currentVideoViews),
-                                Pair("users", users)
+                                Pair("closestUsers", closestUsernames),
+                                Pair("viewcount", currentVideo.views),
+                                Pair("users", userSessions.keys)
                         )
                 ))
                 Timer().schedule(10000) {
                     hasStarted = false
-                    postVideo()
+                    if (!games.contains(this@Game)) {
+                        this@timer.cancel()
+                    } else {
+                        postVideo()
+                    }
                 }
             }
         }
@@ -140,6 +208,7 @@ class Game(val name: String, val id: String) {
 }
 
 class User(val name: String, var points: Int)
+class Video(val id: String, val views: Int, val duration: Long)
 
 @WebSocket
 object GameWebSocketHandler {
@@ -147,13 +216,19 @@ object GameWebSocketHandler {
 
     @OnWebSocketClose
     fun onClose(session: JSession, statusCode: Int, reason: String) {
-        val users = games[sessions[session]?.first]?.users
+        println("Web socket closed!")
+        val users = games[sessions[session]?.first]?.userSessions?.keys
         if (users != null) {
             users
                     .filter { it.name == sessions[session]?.second }
                     .forEach { users.remove(it) }
         }
         sessions.remove(session)
+        sendToAll(sessions.keys, JSONObject(
+                mapOf(
+                        Pair("users", users)
+                )
+        ))
     }
 
     @OnWebSocketMessage
@@ -164,7 +239,7 @@ object GameWebSocketHandler {
             val id = jsonObject["id"] as String
             sessions.put(session, Pair(id, username))
             val game = games[id] ?: return
-            val users = game.users
+            val users = game.userSessions.keys
             var points = 0
             val usersToRemove = HashSet<User>()
             do {
@@ -187,7 +262,6 @@ object GameWebSocketHandler {
                 users.remove(u)
             }
             val user = User(username, points)
-            users.add(user)
             game.userSessions.put(user, session)
             for ((u, s) in game.userSessions.entries) {
                 sendMessage(s, JSONObject(
