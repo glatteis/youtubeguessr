@@ -216,7 +216,6 @@ object GameWebSocketHandler {
 
     @OnWebSocketClose
     fun onClose(session: JSession, statusCode: Int, reason: String) {
-        println("Web socket closed!")
         val users = games[sessions[session]?.first]?.userSessions?.keys
         if (users != null) {
             users

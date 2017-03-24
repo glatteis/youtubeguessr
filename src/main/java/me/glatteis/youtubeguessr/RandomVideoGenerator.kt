@@ -5,10 +5,8 @@ import org.json.JSONObject
 import java.io.InputStreamReader
 import java.net.URL
 import java.security.SecureRandom
-import java.text.SimpleDateFormat
 import java.time.Duration
 import java.util.*
-import javax.xml.datatype.DatatypeFactory
 
 
 /**
@@ -30,7 +28,6 @@ object RandomVideoGenerator {
         var viewCount: Int?
         var duration: String?
         do {
-            println("Generating...")
             foundVideo = null
             viewCount = null
             duration = null
@@ -48,7 +45,6 @@ object RandomVideoGenerator {
                 viewCount = jsonV.getJSONArray("items").getJSONObject(0).getJSONObject("statistics").getString("viewCount").toInt()
 
                 val jsonD = grabResult(URL(urlDuration + foundVideo + key))
-                println(jsonD)
                 duration = jsonD.getJSONArray("items").getJSONObject(0).getJSONObject("contentDetails").getString("duration")
             } catch (e: JSONException) {
                 //
@@ -58,10 +54,8 @@ object RandomVideoGenerator {
     }
 
     fun iso8601toSeconds(duration: String): Long {
-        print(duration)
         val d = Duration.parse(duration)
         val seconds = d.seconds
-        println(seconds)
         return seconds
     }
 

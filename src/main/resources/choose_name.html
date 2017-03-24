@@ -1,18 +1,24 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <title>Choose Name</title>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="stylesheet" href="css/bootstrap.min.css">
     <link rel="stylesheet" href="youtubeguessr.css">
+    <title>Choose Name</title>
 </head>
 <body>
-<h1>Choose Name</h1>
-<form method="POST" action="/choose_name">
-    <label>
-        Username:
-        <input type="text" name="username" required="required">
-    </label>
-    <input type="submit">
-</form>
+<div class="container">
+    <h1>Choose Name</h1>
+    <form method="POST" action="/choose_name">
+        <div class="input-group">
+            <span class="input-group-addon">Username: </span>
+            <input name="username" type="text" class="form-control" placeholder="The_Legend27" required="required">
+        </div>
+        <br>
+        <input type="submit" class="btn btn-primary btn-lg" value="Let's go">
+    </form>
+</div>
 </body>
 </html>
