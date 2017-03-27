@@ -2,6 +2,7 @@ package me.glatteis.youtubeguessr
 
 import org.json.JSONException
 import org.json.JSONObject
+import java.io.File
 import java.io.InputStreamReader
 import java.net.URL
 import java.security.SecureRandom
@@ -17,7 +18,18 @@ object RandomVideoGenerator {
     val urlStart = "https://www.googleapis.com/youtube/v3/search?part=id&maxResults=50&type=video&videoSyndicated=true&q="
     val urlViews = "https://www.googleapis.com/youtube/v3/videos?part=statistics&id="
     val urlDuration = "https://www.googleapis.com/youtube/v3/videos?part=contentDetails&id="
-    val key = "&key=AIzaSyCvAthOGvbUcWN6NfH8Oj4awnEvbtKk0Js"
+    val key: String
+    init {
+        val keyFile = File("key")
+        val scanner = Scanner(keyFile.inputStream())
+        var keyBuffer = ""
+        while (scanner.hasNextLine()) {
+            keyBuffer += scanner.nextLine()
+        }
+        scanner.close()
+        println(keyBuffer)
+        key = "&key=$keyBuffer"
+    }
 
     val random = SecureRandom()
 

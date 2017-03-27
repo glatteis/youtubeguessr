@@ -1,6 +1,7 @@
 package me.glatteis.youtubeguessr
 
 import spark.ModelAndView
+import spark.Spark
 import spark.Spark.*
 import spark.template.mustache.MustacheTemplateEngine
 import java.util.*
@@ -10,7 +11,10 @@ val games = ConcurrentHashMap<String, Game>()
 val mustacheTemplateEngine = MustacheTemplateEngine()
 
 fun main(args: Array<String>) {
-    port(25565)
+    if (args.isEmpty()) throw IllegalArgumentException("Port has to be specified.")
+    val portAsString = args[0]
+    val port = portAsString.toInt()
+    port(port)
     webSocket("/gamesocket", GameWebSocketHandler)
     staticFileLocation("/")
     get("/", { request, response ->
