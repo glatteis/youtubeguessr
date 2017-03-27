@@ -45,7 +45,11 @@ object RandomVideoGenerator {
                 viewCount = jsonV.getJSONArray("items").getJSONObject(0).getJSONObject("statistics").getString("viewCount").toInt()
 
                 val jsonD = grabResult(URL(urlDuration + foundVideo + key))
-                duration = jsonD.getJSONArray("items").getJSONObject(0).getJSONObject("contentDetails").getString("duration")
+                val contentDetails = jsonD.getJSONArray("items").getJSONObject(0).getJSONObject("contentDetails")
+                duration = contentDetails.getString("duration")
+                if (contentDetails.has("regionRestriction") || contentDetails.getBoolean("licensedContent")) {
+                    continue
+                }
             } catch (e: JSONException) {
                 //
             }

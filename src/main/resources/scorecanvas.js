@@ -1,4 +1,3 @@
-
 function drawCanvas(guesses, actualViews, winners) {
     var canvas = $("#score_canvas")[0];
     const w = canvas.width;
@@ -51,6 +50,8 @@ function drawCanvas(guesses, actualViews, winners) {
         var cutOffLeft = "";
         var cutOffRight = "";
 
+        context.fillStyle = "#df3023";
+
         Object.keys(guesses).forEach(function (username) {
             const guess = guesses[username];
             var name = username;
@@ -66,7 +67,6 @@ function drawCanvas(guesses, actualViews, winners) {
                 return
             }
             const xValue = lineWidth * ((guess - min) / (max - min)) + 50;
-            context.fillStyle = "#df3023";
             context.beginPath();
             context.arc(xValue, h / 2, 20, 0, 360);
             context.fill();

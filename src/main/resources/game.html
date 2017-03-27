@@ -10,61 +10,98 @@
 <body>
 
 <div class="container">
+    <br>
     <div class="row">
-        <h3>{{game_name}}</h3>
+        <div class="col-sm-3">
+            <h3 style="color: #b92c28; display: inline;">youtubeguessr </h3>
+        </div>
+        <div class="col-sm-4">
+            <h3 style="align-self: center;display: inline;">{{game_name}}</h3>
+        </div>
+        <div class="col-sm-3" style="text-align: right;">
+            <span class="glyphicon glyphicon-volume-up" aria-hidden="true"></span>
+            <input id="volume_slider" type="range" value="100" onchange="volumeChanged(this)" style="width: 85%; display: inline;">
+        </div>
+        <div class="col-sm-2" style="text-align: right;">
+            <button class="btn btn-secondary" onclick="enableDarkTheme()">Dark Theme</button>
+        </div>
     </div>
+    <br>
     <div class="row">
-        <div class="col-sm-2"> <!-- User Overview !-->
-            <table id="user_table" class="table table-striped">
-                <thead class="thead-inverse"><tr><th>name</th><th>#</th></tr></thead>
+        <div class="col-sm-3">
+            <!-- Chat Window !-->
+            <select id="chat_window" multiple class="form-control" style="height: 400px;">
+
+            </select>
+            <br>
+            <form action="javascript:;" onsubmit="chatSubmitted()" class="form-inline">  <!-- Chat Overview !-->
+                <div class="input-group">
+                    <input id="chat_input" type="text" class="form-control input-sm" placeholder="Your message..."
+                           autocomplete="off">
+                    <span class="input-group-btn">
+                        <button id="chat_submit" class="btn btn-secondary btn-sm" type="submit">
+                            <span class="glyphicon glyphicon-send" aria-hidden="true"></span>
+                        </button>
+                    </span>
+                </div>
+            </form>
+            <br>
+            <table id="user_table" class="table"> <!-- User Overview !-->
+                <thead>
+                <tr>
+                    <th>name</th>
+                    <th>#</th>
+                </tr>
+                </thead>
             </table>
         </div>
-        <div class="col-lg-9">
+        <div class="col-md-9">
             <div class="row"> <!-- Video !-->
                 <div id="viddiv" style="pointer-events: none;">
-                    <iframe width="810" height="540"
-                            src="//www.youtube.com/embed/?modestbranding=1&autohide=1&showinfo=0&controls=0&autoplay=1&rel=0
-             &disablekb=1&fs=0&loop=1"
-                            frameborder="0" id="video"></iframe>
+                    <!-- Hey there. I know you are able to cheat, and I can't prevent that.
+                    Please don't though, it ruins the fun for everybody, including you. !-->
+                    <div id="video"></div>
                 </div>
             </div>
-
-            <div class="row"> <!-- Voting !-->
-                <button class="btn btn-primary" id="start_button" onclick="startClicked()">Start Game</button>
-
-                <form hidden="hidden" id="guess_form" action="javascript:;" onsubmit="guessSubmitted(this)">
-                    <div class="input-group">
-                        <span class="input-group-addon">Your guess: </span>
-                        <input type="number" name="views">
-                    </div>
-                    <br>
-                    <input type="submit" class="btn btn-primary" value="Guess"><br>
-                    <label id="countdown_label"></label><br>
-                    <label id="duration_label"></label><br>
-                    <label id="current_guess"></label>
-                </form>
+            <br>
+            <button class="btn btn-primary" id="start_button" onclick="startClicked()">Start Game</button>
+            <div class="row justify-content-start"> <!-- Voting !-->
+                <div class="col-lg-6">
+                    <form hidden="hidden" id="guess_form" action="javascript:;" onsubmit="guessSubmitted(this)">
+                        <div class="input-group">
+                            <input id="guess_input" class="form-control" type="number" name="views"
+                                   placeholder="Your guess">
+                            <div class="input-group-btn">
+                                <input id="guess_button" type="submit" class="btn btn-secondary" value="Guess"><br>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+                <div class="col-md-1">
+                    <h4 id="duration_label"></h4>
+                </div>
+                <div class="col-sm-1">
+                    <h4 id="countdown_label"></h4>
+                </div>
+                <div class="col-md-4">
+                    <h4 id="current_guess"></h4>
+                </div>
                 <div id="results" hidden="hidden">
                     <canvas id="score_canvas" width="810" height="200"></canvas>
-                    <table class="table table-striped" id="guess_table"></table>
+                    <table class="table" id="guess-table"></table>
+                    <!-- Hey there. I know you are able to cheat, and I can't prevent that.
+                    Please don't though, it ruins the fun for everybody, including you. !-->
+                    <button id="open_button" onclick="" class="btn btn-primary">Go to video on YouTube</button>
                 </div>
             </div>
         </div>
-        <div class="col-sm-1"> <!-- Chat !-->
-            <div id="chat">
-                <textarea id="chat_window" readonly="readonly" wrap="soft" disabled="disabled" rows="30"></textarea>
-                <form action="javascript:;" onsubmit="chatSubmitted()">
-                    <input type="text" id="chat_input">
-                    <input type="submit" id="chat_submit">
-                </form>
-            </div>
-        </div>
-
     </div>
 </div>
 </body>
 <script src="js/jquery-3.2.0.min.js"></script>
 <script src="js/bootstrap.min.js"></script>
 <script src="scorecanvas.js"></script>
+<script src="http://www.youtube.com/iframe_api"></script>
 <script type="text/javascript">
     const id = "{{game_id}}";
     var username = "{{username}}";
@@ -73,6 +110,18 @@
         webSocket.send(JSON.stringify(
             {type: "connect", id: id, username: username}
         ));
+    };
+
+    var player;
+    window.onYouTubeIframeAPIReady = function () {
+        player = new YT.Player("video", {
+            width: "864",
+            height: "576",
+            playerVars: {
+                autoplay: 1, controls: 0, disablekb: 1, enablejsapi: 1, loop: 1, modestbranding: 1,
+                showinfo: 0, rel: 0
+            }
+        });
     };
 
     webSocket.onmessage = function (message) {
@@ -107,21 +156,23 @@
             } else {
                 secondsString = seconds.toString();
             }
-            $("#duration_label")[0].innerHTML = "Duration: " + minutes + ":" + secondsString;
+            $("#duration_label")[0].innerHTML = minutes + ":" + secondsString;
             var url = data.url;
             if (url !== null) {
-                $("#video")[0].setAttribute("src",
-                    "//www.youtube.com/embed/" + url + "?modestbranding=1&autohide=1&showinfo=0&controls=0&autoplay=1&rel=0&disablekb=1&fs=0&loop=1");
+                player.loadVideoById(url + "", 0, "large");
+                //$("#video")[0].setAttribute("src",
+                //    "//www.youtube.com/embed/" + url + "?modestbranding=1&autohide=1&showinfo=0&controls=0&autoplay=1&rel=0&disablekb=1&fs=0&loop=1");
+                $("#open_button")[0].setAttribute("onclick", "window.open('http://youtube.com/watch?v=" + url + "','_blank')")
             }
         }
         if (data.type === "updateCountdown") {
-            $("#countdown_label")[0].innerHTML = "Time: " + data.countdown.toString();
+            $("#countdown_label")[0].innerHTML = data.countdown.toString();
         }
         if (data.type === "score") {
             $("#results").show();
             drawCanvas(data.guesses, data.viewcount, data.closestUsers);
             const guesses = data.guesses;
-            const guessTable = $("#guess_table")[0];
+            const guessTable = $("#guess-table")[0];
             guessTable.innerHTML = "";
             const closestUsers = data.closestUsers;
             Object.keys(guesses).forEach(function (username) {
@@ -133,15 +184,19 @@
                 }
                 guessTable.innerHTML += "<tr><td>" + username + "</td><td>" + guess.toString() + "</td></tr>";
             });
-            //$("#actual_count")[0].innerHTML = "Actual views: " + data.viewcount;
         }
         if (data.type === "chatMessage") {
+            const $chatWindow = $("#chat_window");
+            const chatWindow = $chatWindow[0];
             const chatMessage = data.message;
             var dataUsername = data.senderName;
             if (dataUsername === username) {
                 dataUsername += " *";
             }
-            $("#chat_window").textContent += dataUsername + ": " + chatMessage + "\n";
+            const windowSize = chatWindow.length;
+            chatWindow.innerHTML += "<option value='" + windowSize + "'>" +
+                dataUsername + ": " + chatMessage + "</option>";
+            $chatWindow.scrollTop($chatWindow.find("[value=\"" + windowSize + "\"]").offset().top);
         }
     };
 
@@ -157,17 +212,47 @@
         webSocket.send(JSON.stringify(
             {"type": "guess", "views": views}
         ));
-        document.getElementById("current_guess").innerHTML = "Current Guess: " + views.toString();
+        $("#current_guess")[0].innerHTML = "Current: " + views.toString();
     }
 
     function chatSubmitted() {
-        const message = document.getElementById("chat_input").value;
+        const chatInput = $("#chat_input")[0];
+        const message = chatInput.value;
         webSocket.send(JSON.stringify(
             {"type": "chatMessage", "message": message}
         ));
-        document.getElementById("chat_input").value = "";
-        document.getElementById("chat_input").focus();
+        chatInput.value = "";
+        chatInput.focus();
+    }
+
+    function volumeChanged(slider) {
+        const volume = slider.value;
+        player.setVolume(volume);
+    }
+
+    var darkThemeEnabled = false;
+    const darkColor = "#131313";
+    const itemsToChange = ["chat_input", "chat_window", "chat_submit", "guess_input", "guess_button"];
+
+    function enableDarkTheme() {
+        darkThemeEnabled = !darkThemeEnabled;
+        if (darkThemeEnabled) {
+            document.body.style.color = "#fff";
+            document.body.style.backgroundColor = darkColor;
+            for (var s1 = 0; s1 < itemsToChange.length; s1++) {
+                const element = document.getElementById(itemsToChange[s1]);
+                element.style.backgroundColor = "transparent";
+                element.style.color = "#fff";
+            }
+        } else {
+            document.body.style.color = darkColor;
+            document.body.style.backgroundColor = "#fff";
+            for (var s2 = 0; s2 < itemsToChange.length; s2++) {
+                const element = document.getElementById(itemsToChange[s2]);
+                element.style.backgroundColor = null;
+                element.style.color = null;
+            }
+        }
     }
 </script>
-
 </html>
