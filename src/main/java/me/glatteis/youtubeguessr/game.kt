@@ -1,6 +1,5 @@
 package me.glatteis.youtubeguessr
 
-import org.eclipse.jetty.util.ConcurrentHashSet
 import org.eclipse.jetty.websocket.api.annotations.OnWebSocketClose
 import org.eclipse.jetty.websocket.api.annotations.OnWebSocketMessage
 import org.eclipse.jetty.websocket.api.annotations.WebSocket
@@ -18,7 +17,7 @@ import org.eclipse.jetty.websocket.api.Session as JSession
 /**
  * Created by Linus on 19.03.2017!
  */
-class Game(val name: String, val id: String) {
+class Game(val name: String, val id: String, val countdownTime: Int) {
 
     //todo game isn't disposed of correctly
 
@@ -56,7 +55,7 @@ class Game(val name: String, val id: String) {
     fun getGame(request: Request, response: Response): ModelAndView {
         val username: String? = request.session().attribute("username")
 
-        if (username == null) {
+        if (username == null || username.isBlank()) {
             response.redirect("/choose_name?id=" + id)
         }
 
@@ -74,12 +73,12 @@ class Game(val name: String, val id: String) {
     var hasStarted = false
     var countdown = 0
     var currentVideo = Video("", 0, 0)
+    val readyUsers = ArrayList<User>()
 
     fun message(message: JSONObject, session: JSession) {
         if (message.get("type") == "start") {
             postVideo()
-        }
-        if (message.get("type") == "guess") {
+        } else if (message.get("type") == "guess") {
             if (!hasStarted || countdown == 0) return
             val viewsString = message.getString("views")
             if (viewsString.isBlank()) return
@@ -96,8 +95,7 @@ class Game(val name: String, val id: String) {
                     guesses.put(u, views)
                 }
             }
-        }
-        if (message.get("type") == "chatMessage") {
+        } else if (message.get("type") == "chatMessage") {
             var user: User? = null
             for ((u, s) in userSessions) {
                 if (s == session) {
@@ -105,7 +103,7 @@ class Game(val name: String, val id: String) {
                     break
                 }
             }
-            if (user == null) return
+            user ?: return
             val chatMessage = message.get("message") ?: return
             if (chatMessage !is String || chatMessage.isBlank()) return
             GameWebSocketHandler.sendToAll(userSessions.values, JSONObject(
@@ -115,6 +113,36 @@ class Game(val name: String, val id: String) {
                             Pair("senderName", user.name)
                     )
             ))
+        } else if (message.get("type") == "videoBuffered") {
+            if (countdown <= countdownTime) {
+                GameWebSocketHandler.sendMessage(session, JSONObject(
+                        mapOf(
+                                Pair("type", "startVideo"),
+                                Pair("at", countdownTime - countdown)
+                        )
+                ))
+            }
+            var user: User? = null
+            for ((u, s) in userSessions) {
+                if (s == session) {
+                    user = u
+                    break
+                }
+            }
+            user ?: return
+            if (!readyUsers.contains(user)) {
+                readyUsers.add(user)
+            }
+            if (readyUsers.size >= userSessions.size) {
+                countdown = countdownTime
+                readyUsers.clear()
+                GameWebSocketHandler.sendToAll(userSessions.values, JSONObject(
+                        mapOf(
+                                Pair("type", "startVideo"),
+                                Pair("at", 0)
+                        )
+                ))
+            }
         }
     }
 
@@ -143,9 +171,10 @@ class Game(val name: String, val id: String) {
                         Pair("users", userSessions.keys)
                 )
         ))
-        countdown = 30
+        countdown = countdownTime + 5
         timer(initialDelay = 1000, period = 1000, daemon = true) {
             countdown--
+            if (countdown > countdownTime) return@timer
             GameWebSocketHandler.sendToAll(userSessions.values, JSONObject(
                     mapOf(
                             Pair("type", "updateCountdown"),
@@ -220,9 +249,13 @@ object GameWebSocketHandler {
         if (users != null) {
             users
                     .filter { it.name == sessions[session]?.second }
-                    .forEach { users.remove(it) }
+                    .forEach {
+                        users.remove(it)
+                        games[sessions[session]?.first]?.readyUsers?.remove(it)
+                    }
         }
         sessions.remove(session)
+
         sendToAll(sessions.keys, JSONObject(
                 mapOf(
                         Pair("users", users)

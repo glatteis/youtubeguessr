@@ -27,7 +27,6 @@ object RandomVideoGenerator {
             keyBuffer += scanner.nextLine()
         }
         scanner.close()
-        println(keyBuffer)
         key = "&key=$keyBuffer"
     }
 

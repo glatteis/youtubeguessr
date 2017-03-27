@@ -28,7 +28,7 @@ fun main(args: Array<String>) {
             return@post response.redirect("/")
         }
         val id = RandomStringGenerator.randomString(8)
-        val game = Game(gameName, id)
+        val game = Game(gameName, id, 30)
         games.put(id, game)
         request.session(true).attribute("username", username)
         response.redirect("/game?id=" + id)

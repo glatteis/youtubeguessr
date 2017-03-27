@@ -18,9 +18,15 @@
         <div class="col-sm-4">
             <h3 style="align-self: center;display: inline;">{{game_name}}</h3>
         </div>
-        <div class="col-sm-3" style="text-align: right;">
+        <div class="col-sm-2" style="text-align: right;">
             <span class="glyphicon glyphicon-volume-up" aria-hidden="true"></span>
-            <input id="volume_slider" type="range" value="100" onchange="volumeChanged(this)" style="width: 85%; display: inline;">
+            <input id="volume_slider" type="range" value="100" onchange="volumeChanged(this)"
+                   style="width: 85%; display: inline;">
+        </div>
+        <div class="col-sm-1" style="text-align: right;" title="I don't want to see this (stops & hides video)">
+            <button class="btn" onclick="player.loadVideoById('', 0, 'large')">
+                <span class="glyphicon glyphicon-eye-close" aria-hidden="true"></span>
+            </button>
         </div>
         <div class="col-sm-2" style="text-align: right;">
             <button class="btn btn-secondary" onclick="enableDarkTheme()">Dark Theme</button>
@@ -104,14 +110,9 @@
 <script type="text/javascript">
     const id = "{{game_id}}";
     var username = "{{username}}";
-    var webSocket = new WebSocket("ws://" + location.hostname + ":" + location.port + "/gamesocket");
-    webSocket.onopen = function () {
-        webSocket.send(JSON.stringify(
-            {type: "connect", id: id, username: username}
-        ));
-    };
-
+    var webSocket;
     var player;
+    var videoNew = true;
     window.onYouTubeIframeAPIReady = function () {
         player = new YT.Player("video", {
             width: "864",
@@ -119,11 +120,34 @@
             playerVars: {
                 autoplay: 1, controls: 0, disablekb: 1, enablejsapi: 1, loop: 1, modestbranding: 1,
                 showinfo: 0, rel: 0
+            },
+            events: {
+                onStateChange: function (event) {
+                    if (event.data === 1 && videoNew) {
+                        videoNew = false;
+                        player.pauseVideo();
+                        webSocket.send(JSON.stringify(
+                            {"type": "videoBuffered"}
+                        ))
+                    } else if (event.data === 0) {
+                        player.seekTo(0);
+                        player.playVideo();
+                    }
+                },
+                onReady: function () {
+                    webSocket = new WebSocket("ws://" + location.hostname + ":" + location.port + "/gamesocket");
+                    webSocket.onopen = function () {
+                        webSocket.send(JSON.stringify(
+                            {type: "connect", id: id, username: username}
+                        ));
+                    };
+                    webSocket.onmessage = webSocketOnMessage;
+                }
             }
         });
     };
 
-    webSocket.onmessage = function (message) {
+    function webSocketOnMessage(message) {
         var data = JSON.parse(message.data);
         if (data.username !== undefined) {
             username = data.username;
@@ -142,6 +166,7 @@
             }
         }
         if (data.type === "newVideo") {
+            videoNew = true;
             $("#current_guess")[0].innerHTML = "";
             $("#results").hide();
             $("#start_button").hide();
@@ -158,16 +183,12 @@
             $("#duration_label")[0].innerHTML = minutes + ":" + secondsString;
             var url = data.url;
             if (url !== null) {
-                player.loadVideoById(url + "", 0, "large");
-                //$("#video")[0].setAttribute("src",
-                //    "//www.youtube.com/embed/" + url + "?modestbranding=1&autohide=1&showinfo=0&controls=0&autoplay=1&rel=0&disablekb=1&fs=0&loop=1");
+                player.loadVideoById(url, 0, "large");
                 $("#open_button")[0].setAttribute("onclick", "window.open('http://youtube.com/watch?v=" + url + "','_blank')")
             }
-        }
-        if (data.type === "updateCountdown") {
+        } else if (data.type === "updateCountdown") {
             $("#countdown_label")[0].innerHTML = data.countdown.toString();
-        }
-        if (data.type === "score") {
+        } else if (data.type === "score") {
             $("#results").show();
             drawCanvas(data.guesses, data.viewcount, data.closestUsers);
             const guesses = data.guesses;
@@ -185,19 +206,26 @@
             });
         }
         if (data.type === "chatMessage") {
-            const $chatWindow = $("#chat_window");
-            const chatWindow = $chatWindow[0];
             const chatMessage = data.message;
             var dataUsername = data.senderName;
             if (dataUsername === username) {
                 dataUsername += " *";
             }
-            const windowSize = chatWindow.length;
-            chatWindow.innerHTML += "<option value='" + windowSize + "'>" +
-                dataUsername + ": " + chatMessage + "</option>";
-            $chatWindow.scrollTop($chatWindow.find("[value=\"" + windowSize + "\"]").offset().top);
+            appendChatMessage(dataUsername, chatMessage)
+        } else if (data.type === "startVideo" && player) {
+            if (data.at) player.seekTo(data.at);
+            player.playVideo();
         }
     };
+
+    function appendChatMessage(username, chatMessage) {
+        const $chatWindow = $("#chat_window");
+        const chatWindow = $chatWindow[0];
+        const windowSize = chatWindow.length;
+        chatWindow.innerHTML += "<option value='" + windowSize + "'>" +
+            username + ": " + chatMessage + "</option>";
+        $chatWindow.scrollTop($chatWindow.find("[value=\"" + windowSize + "\"]").offset().top);
+    }
 
     function startClicked() {
         webSocket.send(JSON.stringify(
