@@ -37,7 +37,8 @@ class Game(val name: String, val id: String, val countdownTime: Int) {
                 userSessions.remove(u)
             }
             if (userSessions.isEmpty()) {
-                games.remove(name)
+                println("Removing game!")
+                games.remove(id)
                 this.cancel()
             } else {
                 for ((u, s) in userSessions.entries) {

@@ -1,7 +1,6 @@
 package me.glatteis.youtubeguessr
 
 import spark.ModelAndView
-import spark.Spark
 import spark.Spark.*
 import spark.template.mustache.MustacheTemplateEngine
 import java.util.*
@@ -24,11 +23,20 @@ fun main(args: Array<String>) {
     post("/create", { request, response ->
         val gameName = request.queryParams("game_name")
         val username = request.queryParams("username")
-        if (gameName == null || gameName.isBlank() || username == null || username.isBlank()) {
+        val countdownTime = request.queryParams("countdown_time")
+        if (gameName == null || gameName.isBlank() || username == null || username.isBlank() || countdownTime == null ||
+                countdownTime.isBlank()) {
             return@post response.redirect("/")
         }
+        val time: Int
+        try {
+            time = countdownTime.toInt()
+        } catch (e: Exception) {
+            return@post response.redirect("/")
+        }
+        if (time < 5) return@post response.redirect("/")
         val id = RandomStringGenerator.randomString(8)
-        val game = Game(gameName, id, 30)
+        val game = Game(gameName, id, time)
         games.put(id, game)
         request.session(true).attribute("username", username)
         response.redirect("/game?id=" + id)
