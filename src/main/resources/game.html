@@ -5,7 +5,7 @@
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <link rel="stylesheet" href="css/bootstrap.min.css">
-    <title>YoutubeGuessr</title>
+    <title>youtubeguessr - {{game_name}}</title>
 </head>
 <body>
 
@@ -13,7 +13,7 @@
     <br>
     <div class="row">
         <div class="col-sm-3">
-            <h3 style="color: #b92c28; display: inline;">youtubeguessr </h3>
+            <h3 style="color: #b92c28; display: inline;">youtubeguessr</h3>
         </div>
         <div class="col-sm-4">
             <h3 style="align-self: center;display: inline;">{{game_name}}</h3>
@@ -52,6 +52,7 @@
                 </div>
             </form>
             <br>
+            <b id="points_to_win_text">{{points_to_win}} points to win</b>
             <table id="user_table" class="table"> <!-- User Overview !-->
                 <thead>
                 <tr>
@@ -111,6 +112,10 @@
 <script type="text/javascript">
     const id = "{{game_id}}";
     var username = "{{username}}";
+    const pointsToWin = "{{points_to_win}}";
+    if (pointsToWin === "") {
+        $("#points_to_win_text").hide()
+    }
     var webSocket;
     var player;
     var videoNew = true;
@@ -236,6 +241,7 @@
     function guessSubmitted(form) {
         const views = form.views.value;
         form.views.value = null;
+        if (parseInt(views) < 0 || parseInt(views) > Number.MAX_VALUE) return;
         webSocket.send(JSON.stringify(
             {"type": "guess", "views": views}
         ));

@@ -17,7 +17,7 @@ import org.eclipse.jetty.websocket.api.Session as JSession
 /**
  * Created by Linus on 19.03.2017!
  */
-class Game(val name: String, val id: String, val countdownTime: Int, val winPoints: Int?) {
+class Game(val name: String, val id: String, val countdownTime: Int, val winPoints: Int?, val isPublic: Boolean) {
 
     val userSessions = ConcurrentHashMap<User, JSession>()
     val guesses = ConcurrentHashMap<User, Int>()
@@ -58,7 +58,8 @@ class Game(val name: String, val id: String, val countdownTime: Int, val winPoin
         val attributes = mapOf(
                 Pair("username", username),
                 Pair("game_name", name),
-                Pair("game_id", id)
+                Pair("game_id", id),
+                Pair("points_to_win", winPoints)
         )
         request.session().attribute("redirect_id", id)
         return ModelAndView(attributes, "game.html")
@@ -256,6 +257,7 @@ data class Video(val id: String, val views: Int, val duration: Long)
 
 @WebSocket
 object GameWebSocketHandler {
+    //todo remove obscurity from pair in this map (pair is <game_id, name>)
     val sessions = ConcurrentHashMap<JSession, Pair<String, String>>()
 
     @Suppress("UNUSED_PARAMETER")

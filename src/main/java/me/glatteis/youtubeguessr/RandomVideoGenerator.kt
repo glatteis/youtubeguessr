@@ -16,7 +16,7 @@ import java.util.*
 
 object RandomVideoGenerator {
 
-    object VideoBucket {
+    private object VideoBucket {
         val videos = HashSet<Video>()
         val gamesThatFetched = HashSet<String>()
         fun clear() {
@@ -97,6 +97,7 @@ object RandomVideoGenerator {
                 }
             }
         }
+        println(VideoBucket.videos)
     }
 
     fun iso8601toSeconds(duration: String): Long {

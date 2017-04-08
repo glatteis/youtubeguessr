@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="stylesheet" href="css/bootstrap.min.css">
+    <title>Game Overview</title>
+</head>
+<body>
+<div class="container">
+    <div class="row">
+        <h1>Find Game</h1>
+    </div>
+    <div class="row">
+        <div class="col">
+            <table class="table" id="table">
+                <thead>
+                <tr>
+                    <th>Game Name</th>
+                    <th>Players</th>
+                    <th>Points to Win</th>
+                    <th>Countdown Time</th>
+                    <th>Has Started</th>
+                </tr>
+                </thead>
+                <tbody>
+
+                </tbody>
+            </table>
+        </div>
+
+    </div>
+</div>
+</body>
+<script src="js/jquery-3.2.0.min.js"></script>
+<script>
+    const gamesAsString = "{{games}}".replace(/&quot;/g, '"');
+    const games = JSON.parse(gamesAsString);
+    const table = $("#table");
+    var game;
+    for (var i = 0; i < games.length; i++) {
+        game = games[i];
+        table.append("<tr><td><a href='/game?id=" + game.id + "'>" + game.name + "</a>" +
+            "</td><td>" + game.players + "</td><td>" +
+            ((game.pointsToWin === undefined) ? "-" : game.pointsToWin) +
+            "</td><td>" + game.countdownTime + "</td><td>" + (
+                game.hasStarted ? "Yes" : "No"
+            ) + "</td></tr>");
+    }
+</script>
+</html>
