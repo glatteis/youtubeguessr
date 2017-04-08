@@ -36,8 +36,9 @@
     <div class="row">
         <div class="col-sm-3">
             <!-- Chat Window !-->
-            <select id="chat_window" multiple class="form-control" style="height: 400px;">
-            </select>
+            <div id="chat_window" style="height: 400px; overflow: scroll;">
+
+            </div>
             <br>
             <form action="javascript:;" onsubmit="chatSubmitted()" class="form-inline">  <!-- Chat Overview !-->
                 <div class="input-group">
@@ -204,8 +205,7 @@
                 }
                 guessTable.innerHTML += "<tr><td>" + username + "</td><td>" + guess.toString() + "</td></tr>";
             });
-        }
-        if (data.type === "chatMessage") {
+        } else if (data.type === "chatMessage") {
             const chatMessage = data.message;
             var dataUsername = data.senderName;
             if (dataUsername === username) {
@@ -215,16 +215,16 @@
         } else if (data.type === "startVideo" && player) {
             if (data.at) player.seekTo(data.at);
             player.playVideo();
+        } else if (data.type === "gameEnd") {
+            player.stop(); 
         }
-    };
+    }
 
     function appendChatMessage(username, chatMessage) {
         const $chatWindow = $("#chat_window");
         const chatWindow = $chatWindow[0];
-        const windowSize = chatWindow.length;
-        chatWindow.innerHTML += "<option value='" + windowSize + "'>" +
-            username + ": " + chatMessage + "</option>";
-        $chatWindow.scrollTop($chatWindow.find("[value=\"" + windowSize + "\"]").offset().top);
+        chatWindow.innerHTML += username + ": " + chatMessage + "<br>";
+        chatWindow.scrollTop = chatWindow.scrollHeight;
     }
 
     function startClicked() {

@@ -23,20 +23,23 @@ fun main(args: Array<String>) {
     post("/create", { request, response ->
         val gameName = request.queryParams("game_name")
         val username = request.queryParams("username")
-        val countdownTime = request.queryParams("countdown_time")
-        if (gameName == null || gameName.isBlank() || username == null || username.isBlank() || countdownTime == null ||
-                countdownTime.isBlank()) {
+        val timeAsString = request.queryParams("countdown_time")
+        val pointsToWinAsString = request.queryParams("points_to_win")
+        if (gameName == null || gameName.isBlank() || username == null || username.isBlank() || timeAsString == null ||
+                timeAsString.isBlank()) {
             return@post response.redirect("/")
         }
         val time: Int
+        val pointsToWin: Int?
         try {
-            time = countdownTime.toInt()
+            time = timeAsString.toInt()
+            pointsToWin = if (pointsToWinAsString.isBlank()) null else pointsToWinAsString.toInt()
         } catch (e: Exception) {
             return@post response.redirect("/")
         }
-        if (time < 5) return@post response.redirect("/")
+        if (time < 0 || (pointsToWin != null && pointsToWin < 1)) return@post response.redirect("/")
         val id = RandomStringGenerator.randomString(8)
-        val game = Game(gameName, id, time)
+        val game = Game(gameName, id, time, pointsToWin)
         games.put(id, game)
         request.session(true).attribute("username", username)
         response.redirect("/game?id=" + id)
@@ -53,7 +56,7 @@ fun main(args: Array<String>) {
     get("/choose_name", { request, response ->
         val id: String? = request.queryParams("id")
         if (id == null) {
-            halt("You know what you did.")
+            halt("Error: ID is null. Please try again.")
             return@get null
         }
         request.session().attribute("redirect_id", id)

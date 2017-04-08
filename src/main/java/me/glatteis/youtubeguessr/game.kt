@@ -17,9 +17,7 @@ import org.eclipse.jetty.websocket.api.Session as JSession
 /**
  * Created by Linus on 19.03.2017!
  */
-class Game(val name: String, val id: String, val countdownTime: Int) {
-
-    //todo game isn't disposed of correctly
+class Game(val name: String, val id: String, val countdownTime: Int, val winPoints: Int?) {
 
     val userSessions = ConcurrentHashMap<User, JSession>()
     val guesses = ConcurrentHashMap<User, Int>()
@@ -37,7 +35,6 @@ class Game(val name: String, val id: String, val countdownTime: Int) {
                 userSessions.remove(u)
             }
             if (userSessions.isEmpty()) {
-                println("Removing game!")
                 games.remove(id)
                 this.cancel()
             } else {
@@ -55,19 +52,15 @@ class Game(val name: String, val id: String, val countdownTime: Int) {
 
     fun getGame(request: Request, response: Response): ModelAndView {
         val username: String? = request.session().attribute("username")
-
         if (username == null || username.isBlank()) {
             response.redirect("/choose_name?id=" + id)
         }
-
         val attributes = mapOf(
                 Pair("username", username),
                 Pair("game_name", name),
                 Pair("game_id", id)
         )
-
         request.session().attribute("redirect_id", id)
-
         return ModelAndView(attributes, "game.html")
     }
 
@@ -163,7 +156,7 @@ class Game(val name: String, val id: String, val countdownTime: Int) {
         if (hasStarted) return
         hasStarted = true
         guesses.clear()
-        currentVideo = RandomVideoGenerator.generateRandomVideo()
+        currentVideo = RandomVideoGenerator.fetchVideo(id)
         GameWebSocketHandler.sendToAll(userSessions.values, JSONObject(
                 mapOf(
                         Pair("type", "newVideo"),
@@ -224,6 +217,27 @@ class Game(val name: String, val id: String, val countdownTime: Int) {
                                 Pair("users", userSessions.keys)
                         )
                 ))
+
+                if (winPoints != null) {
+                    val winners = ArrayList<String>()
+                    for (u in userSessions.keys) {
+                        if (u.points >= winPoints) {
+                            winners.add(u.name)
+                        }
+                    }
+                    if (winners.isNotEmpty()) {
+                        GameWebSocketHandler.sendToAll(userSessions.values, JSONObject(
+                                mapOf(
+                                        Pair("type", "gameEnd"),
+                                        Pair("winners", winners)
+                                )
+                        ))
+                        games.remove(id) // Commit Sudoku
+                        this.cancel()
+                        return@timer
+                    }
+                }
+
                 Timer().schedule(10000) {
                     hasStarted = false
                     if (!games.contains(this@Game)) {
@@ -237,15 +251,16 @@ class Game(val name: String, val id: String, val countdownTime: Int) {
     }
 }
 
-class User(val name: String, var points: Int)
-class Video(val id: String, val views: Int, val duration: Long)
+data class User(val name: String, var points: Int)
+data class Video(val id: String, val views: Int, val duration: Long)
 
 @WebSocket
 object GameWebSocketHandler {
     val sessions = ConcurrentHashMap<JSession, Pair<String, String>>()
 
+    @Suppress("UNUSED_PARAMETER")
     @OnWebSocketClose
-    fun onClose(session: JSession, statusCode: Int, reason: String) {
+    fun onClose(session: JSession, c: Int, r: String) {
         val users = games[sessions[session]?.first]?.userSessions?.keys
         if (users != null) {
             users
