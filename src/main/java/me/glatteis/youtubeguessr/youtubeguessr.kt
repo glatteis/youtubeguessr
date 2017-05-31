@@ -17,24 +17,31 @@ fun main(args: Array<String>) {
     port(port)
     webSocket("/gamesocket", GameWebSocketHandler)
     staticFileLocation("/")
+    // Serve start.html as front page
     get("/", { request, response ->
         ModelAndView(null, "start.html")
     }, mustacheTemplateEngine)
+    // Server create.html as game creation page
     get("/create", { request, response ->
         val attributes = HashMap<String, Any>()
         ModelAndView(attributes, "create_game.html")
     }, mustacheTemplateEngine)
+    // Create a game
     post("/create", { request, response ->
+        //Fetch params
         val gameName = request.queryParams("game_name")
         val username = request.queryParams("username")
         val timeAsString = request.queryParams("countdown_time")
         val pointsToWinAsString = request.queryParams("points_to_win")
         val publicAsString = request.queryParams("public")
-        val isPublic = publicAsString == "on"
+        // A public game will be visible from the game browser
+        val isPublic = (publicAsString == "on")
+        // Check for invalid data
         if (gameName == null || gameName.isBlank() || username == null || username.isBlank() || timeAsString == null ||
-                timeAsString.isBlank()) {
+                timeAsString.isBlank() || username.length > 16 || gameName.length > 16) {
             return@post response.redirect("/")
         }
+        // Try to convert time and points to win values to numbers. If not successful, abort
         val time: Int
         val pointsToWin: Int?
         try {
@@ -43,31 +50,42 @@ fun main(args: Array<String>) {
         } catch (e: Exception) {
             return@post response.redirect("/")
         }
-        if (time < 0 || (pointsToWin != null && pointsToWin < 1)) return@post response.redirect("/")
-        val id = RandomStringGenerator.randomString(8)
+        // Check for invalid data
+        if (time < 10 || (pointsToWin != null && pointsToWin < 1)) return@post response.redirect("/")
+        // Games will be identified using unique IDs.
+        var id: String
+        do {
+            id = RandomStringGenerator.randomString(8)
+        } while (games.containsKey(id))
+        // Create game instance
         val game = Game(gameName, id, time, pointsToWin, isPublic)
         games.put(id, game)
+        // Add username to session
         request.session(true).attribute("username", username)
+        // Redirect
         response.redirect("/game?id=" + id)
     })
+    // Fetch a list of every game
     get("/list", { request, response ->
-        val publicGames = ArrayList<Map<String, Any?>>()
-        for (game in games.values) {
-            if (game.isPublic) {
-                publicGames.add(mapOf(
-                        Pair("name", game.name),
-                        Pair("players", game.userSessions.size),
-                        Pair("pointsToWin", game.winPoints),
-                        Pair("countdownTime", game.countdownTime),
-                        Pair("hasStarted", game.hasStarted),
-                        Pair("id", game.id)
-                ))
-            }
-        }
+        // For every game: Get data if public
+        val publicGames = games.values
+                .filter { it.isPublic }
+                .map {
+                    mapOf(
+                            Pair("name", it.name),
+                            Pair("players", it.userSessions.size),
+                            Pair("pointsToWin", it.winPoints),
+                            Pair("countdownTime", it.countdownTime),
+                            Pair("hasStarted", it.hasStarted),
+                            Pair("id", it.id)
+                    )
+                }
+        // Pass to JS on page as attribute, script will build table
         val attributes = HashMap<String, Any>()
         attributes["games"] = JSONArray(publicGames)
         ModelAndView(attributes, "list_names.html")
     }, mustacheTemplateEngine)
+    // Given an ID, return response of game
     get("/game", { request, response ->
         val id = request.queryParams("id")
         if (id == null) {
@@ -81,7 +99,9 @@ fun main(args: Array<String>) {
         }
         game.getGame(request, response)
     }, mustacheTemplateEngine)
+    // Game will redirect to choose_name if user does not have a name yet.
     get("/choose_name", { request, response ->
+        // This is the game ID that the server will redirect to after choosing name
         val id: String? = request.queryParams("id")
         if (id == null) {
             halt("Error: ID is null. Please try again.")
@@ -91,15 +111,15 @@ fun main(args: Array<String>) {
         val attributes = HashMap<String, Any>()
         ModelAndView(attributes, "choose_name.html")
     }, mustacheTemplateEngine)
+    // After choosing a name, data will end up in session
     post("/choose_name", { request, response ->
         val id: String? = request.session().attribute("redirect_id")
         val name: String? = request.queryParams("username")
-        if (id != null && name != null) {
+        if (id != null && name != null && name.isNotBlank() && name.length <= 16) {
             request.session().attribute("username", name)
+            // Redirect to game
             return@post response.redirect("/game?id=" + id)
         }
         ""
     })
 }
-
-private data class DisplayGame(val name: String, val id: String, val players: Int)

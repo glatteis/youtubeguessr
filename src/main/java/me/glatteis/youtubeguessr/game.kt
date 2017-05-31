@@ -254,22 +254,22 @@ class Game(val name: String, val id: String, val countdownTime: Int, val winPoin
 
 data class User(val name: String, var points: Int)
 data class Video(val id: String, val views: Int, val duration: Long)
+data class UserSession(val gameId: String, val username: String)
 
 @WebSocket
 object GameWebSocketHandler {
-    //todo remove obscurity from pair in this map (pair is <game_id, name>)
-    val sessions = ConcurrentHashMap<JSession, Pair<String, String>>()
+    val sessions = ConcurrentHashMap<JSession, UserSession>()
 
     @Suppress("UNUSED_PARAMETER")
     @OnWebSocketClose
     fun onClose(session: JSession, c: Int, r: String) {
-        val users = games[sessions[session]?.first]?.userSessions?.keys
+        val users = games[sessions[session]?.gameId]?.userSessions?.keys
         if (users != null) {
             users
-                    .filter { it.name == sessions[session]?.second }
+                    .filter { it.name == sessions[session]?.username }
                     .forEach {
                         users.remove(it)
-                        games[sessions[session]?.first]?.readyUsers?.remove(it)
+                        games[sessions[session]?.gameId]?.readyUsers?.remove(it)
                     }
         }
         sessions.remove(session)
@@ -287,7 +287,7 @@ object GameWebSocketHandler {
         if (jsonObject["type"] == "connect") {
             var username = jsonObject["username"] as String
             val id = jsonObject["id"] as String
-            sessions.put(session, Pair(id, username))
+            sessions.put(session, UserSession(id, username))
             val game = games[id] ?: return
             val users = game.userSessions.keys
             var points = 0
@@ -323,7 +323,7 @@ object GameWebSocketHandler {
             }
             game.onJoin(session)
         } else {
-            val game = games[sessions[session]?.first]
+            val game = games[sessions[session]?.gameId]
             game ?: return
             game.message(jsonObject, session)
         }
@@ -331,7 +331,7 @@ object GameWebSocketHandler {
 
     fun sendMessage(session: JSession, message: JSONObject) {
         if (!session.isOpen) {
-            val userSessions = games[sessions[session]?.first]?.userSessions
+            val userSessions = games[sessions[session]?.gameId]?.userSessions
             if (userSessions != null) {
                 for ((u, s) in userSessions) {
                     if (s == session) {

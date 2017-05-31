@@ -14,17 +14,13 @@
     <form method="POST" action="/create">
         <div class="input-group">
             <span class="input-group-addon">Game Name</span>
-            <input name="game_name" type="text" class="form-control" placeholder="Super Cool Game" required="required">
-        </div>
-        <br>
-        <div class="input-group">
-            <span class="input-group-addon">Username</span>
-            <input name="username" type="text" class="form-control" placeholder="TheLegend27" required="required">
+            <input name="game_name" type="text" class="form-control" placeholder="Super Cool Game" required="required"
+                   maxlength="16">
         </div>
         <br>
         <div class="input-group">
             <span class="input-group-addon">Countdown Time</span>
-            <input class="form-control" name="countdown_time" type="number" min="0" value="30" required="required">
+            <input class="form-control" name="countdown_time" type="number" min="10" value="30" required="required">
         </div>
         <br>
         <div class="input-group">
@@ -36,6 +32,12 @@
             <label>
                 <input type="checkbox" name="public"> Public (players can join you from the server browser)
             </label>
+        </div>
+        <br>
+        <div class="input-group">
+            <span class="input-group-addon">Your Username</span>
+            <input name="username" type="text" class="form-control" placeholder="TheLegend27" required="required"
+                   maxlength="16">
         </div>
         <br>
         <input type="submit" class="btn btn-primary btn-lg" value="Let's go">
