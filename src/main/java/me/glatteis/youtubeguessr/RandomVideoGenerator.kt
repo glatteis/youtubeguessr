@@ -33,7 +33,7 @@ object RandomVideoGenerator {
     }
 
     // This is the random string generator which will generate random search queries
-    val randomStringGenerator = RandomStringGenerator()
+    val randomStringGenerator = RandomStringGenerator(SecureRandom())
 
     // Google API URLs
     val urlStart = "https://www.googleapis.com/youtube/v3/search?part=id&maxResults=50&type=video&videoSyndicated=true&q="
@@ -51,8 +51,6 @@ object RandomVideoGenerator {
         scanner.close()
         key = "&key=$keyBuffer"
     }
-
-    val random = SecureRandom()
 
     // Amount of chars in search query
     val numGeneratedChars = 5
@@ -81,7 +79,7 @@ object RandomVideoGenerator {
             var json: JSONObject? = null
             do {
                 try {
-                    val randomString = randomStringGenerator.randomString(numGeneratedChars, random = random)
+                    val randomString = randomStringGenerator.randomString(numGeneratedChars)
                     json = grabResult(URL(urlStart + randomString + key))
                     if (json.getJSONArray("items").length() < 1) {
                         continue

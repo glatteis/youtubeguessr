@@ -4,11 +4,21 @@ import org.json.JSONArray
 import spark.ModelAndView
 import spark.Spark.*
 import spark.template.mustache.MustacheTemplateEngine
+import java.security.SecureRandom
 import java.util.*
 import java.util.concurrent.ConcurrentHashMap
 
 val games = ConcurrentHashMap<String, Game>()
 val mustacheTemplateEngine = MustacheTemplateEngine()
+
+private val randomStringGenerator = RandomStringGenerator(SecureRandom())
+
+// Used data classes
+
+// Represents in-game player
+data class User(val name: String, var points: Int)
+// Represents YouTube video
+data class Video(val id: String, val views: Int, val duration: Long)
 
 fun main(args: Array<String>) {
     if (args.isEmpty()) throw IllegalArgumentException("Port has to be specified.")
@@ -34,6 +44,7 @@ fun main(args: Array<String>) {
         val timeAsString = request.queryParams("countdown_time")
         val pointsToWinAsString = request.queryParams("points_to_win")
         val publicAsString = request.queryParams("public")
+        val pointsForExactGuessesAsString = request.queryParams("points_for_exact_guesses") ?: "1"
         // A public game will be visible from the game browser
         val isPublic = (publicAsString == "on")
         // Check for invalid data
@@ -44,21 +55,24 @@ fun main(args: Array<String>) {
         // Try to convert time and points to win values to numbers. If not successful, abort
         val time: Int
         val pointsToWin: Int?
+        val pointsForExactGuesses: Int
         try {
             time = timeAsString.toInt()
             pointsToWin = if (pointsToWinAsString.isBlank()) null else pointsToWinAsString.toInt()
+            pointsForExactGuesses = pointsForExactGuessesAsString.toInt()
         } catch (e: Exception) {
             return@post response.redirect("/")
         }
         // Check for invalid data
-        if (time < 10 || (pointsToWin != null && pointsToWin < 1)) return@post response.redirect("/")
-        // Games will be identified using unique IDs.
+        if (time < 10 || (pointsToWin != null && pointsToWin < 1) || pointsForExactGuesses < 1)
+            return@post response.redirect("/")
+        // Games will be identified using unique IDs
         var id: String
         do {
-            id = RandomStringGenerator.randomString(8)
+            id = randomStringGenerator.randomString(8)
         } while (games.containsKey(id))
         // Create game instance
-        val game = Game(gameName, id, time, pointsToWin, isPublic)
+        val game = Game(gameName, id, time, pointsToWin, isPublic, pointsForExactGuesses)
         games.put(id, game)
         // Add username to session
         request.session(true).attribute("username", username)
@@ -76,7 +90,7 @@ fun main(args: Array<String>) {
                             Pair("players", it.userSessions.size),
                             Pair("pointsToWin", it.winPoints),
                             Pair("countdownTime", it.countdownTime),
-                            Pair("hasStarted", it.hasStarted),
+                            Pair("isVideoPlaying", it.isVideoPlaying),
                             Pair("id", it.id)
                     )
                 }

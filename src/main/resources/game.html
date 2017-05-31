@@ -54,12 +54,6 @@
             <br>
             <b id="points_to_win_text">{{points_to_win}} points to win</b>
             <table id="user_table" class="table"> <!-- User Overview !-->
-                <thead>
-                <tr>
-                    <th>name</th>
-                    <th>#</th>
-                </tr>
-                </thead>
             </table>
         </div>
         <div class="col-md-9">
@@ -161,7 +155,7 @@
         if (data.users !== undefined) {
             const users = data.users;
             const userTable = $("#user_table")[0];
-            userTable.innerHTML = "<thead><tr><th>Name</th><th>#</th></tr></thead>";
+            userTable.innerHTML = "<thead><tr><th>name</th><th>#</th></tr></thead>";
             for (var i = 0; i < users.length; i++) {
                 const user = users[i];
                 var name = user.name;
@@ -221,7 +215,7 @@
             if (data.at) player.seekTo(data.at);
             player.playVideo();
         } else if (data.type === "gameEnd") {
-            player.stop(); 
+            player.stop();
         }
     }
 
