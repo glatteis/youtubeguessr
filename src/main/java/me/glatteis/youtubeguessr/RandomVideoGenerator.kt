@@ -16,6 +16,13 @@ import java.util.*
 
 object RandomVideoGenerator {
 
+    /*
+    The RandomVideoGenerator will search for a random query, accumulate every result and put it into the video bucket.
+    Games fetch videos from the video bucket. Videos will then be deleted from the bucket. A game cannot fetch from the
+    same video query twice, the bucket will be regenerated if that would be the case.
+     */
+
+    // This is the video bucket
     private object VideoBucket {
         val videos = HashSet<Video>()
         val gamesThatFetched = HashSet<String>()
@@ -25,11 +32,12 @@ object RandomVideoGenerator {
         }
     }
 
+    // Google API URLs
     val urlStart = "https://www.googleapis.com/youtube/v3/search?part=id&maxResults=50&type=video&videoSyndicated=true&q="
-    val urlViews = "https://www.googleapis.com/youtube/v3/videos?part=statistics&id="
-    val urlDuration = "https://www.googleapis.com/youtube/v3/videos?part=contentDetails&id="
+    val urlInfo = "https://www.googleapis.com/youtube/v3/videos?part=contentDetails,statistics,status&id="
     val key: String
 
+    // Load up key file with API key
     init {
         val keyFile = File("key")
         val scanner = Scanner(keyFile.inputStream())
@@ -43,26 +51,30 @@ object RandomVideoGenerator {
 
     val random = SecureRandom()
 
+    // Amount of chars in search query
     val numGeneratedChars = 5
 
+    // Behaviour is explained above
     fun fetchVideo(gameId: String): Video {
         with(VideoBucket) {
             if (!gamesThatFetched.contains(gameId) && !videos.isEmpty()) {
                 gamesThatFetched.add(gameId)
+                // "videos" is a HashSet, so "first" has no relevance to where in the API response the video was
                 val v = videos.first()
                 videos.remove(v)
                 return v
             } else {
-                generateVideos()
+                regenerateVideos()
                 return fetchVideo(gameId)
             }
         }
     }
 
-    fun generateVideos() {
+    fun regenerateVideos() {
         VideoBucket.clear()
-
         while (VideoBucket.videos.isEmpty()) {
+
+            // Look for videos using a random string and see if it has at least one video result
             var json: JSONObject? = null
             do {
                 try {
@@ -72,23 +84,33 @@ object RandomVideoGenerator {
                         continue
                     }
                 } catch (e: JSONException) {
-                    //
+                    // Keep on searching...
+                    println("JSONException while looking for videos")
+                    e.printStackTrace()
                 }
             } while (json == null)
 
-
-
+            // Fetch data of every video in response
             for (i in 0..json.getJSONArray("items").length() - 1) {
                 try {
+                    // Get ID
                     val foundVideo = json.getJSONArray("items").getJSONObject(i).getJSONObject("id").getString("videoId")
 
-                    val jsonV = grabResult(URL(urlViews + foundVideo + key))
-                    val viewCount = jsonV.getJSONArray("items").getJSONObject(0).getJSONObject("statistics").getString("viewCount").toInt()
+                    // Get info: contentDetails, statistics and status
+                    val infoJSON = grabResult(URL(urlInfo + foundVideo + key)).getJSONArray("items").getJSONObject(0)
 
-                    val jsonD = grabResult(URL(urlDuration + foundVideo + key))
-                    val contentDetails = jsonD.getJSONArray("items").getJSONObject(0).getJSONObject("contentDetails")
+                    // Grab view count from statistics
+                    val viewCount = infoJSON.getJSONObject("statistics").getString("viewCount").toInt()
+
+                    // Grab duration from contentDetails
+                    val contentDetails = infoJSON.getJSONObject("contentDetails")
                     val duration = contentDetails.getString("duration")
-                    if (contentDetails.has("regionRestriction") || contentDetails.getBoolean("licensedContent")) {
+
+                    // If video is not embeddable, it won't be able to play on youtubeguessr
+                    val embeddable = infoJSON.getJSONObject("status").getBoolean("embeddable")
+
+                    // If video has region restrictions or licensed content, don't play it
+                    if (!embeddable || contentDetails.has("regionRestriction") || contentDetails.getBoolean("licensedContent")) {
                         continue
                     }
 
@@ -100,12 +122,14 @@ object RandomVideoGenerator {
         println(VideoBucket.videos)
     }
 
+    // Convert ISO 8601 (YT time standard) to seconds
     fun iso8601toSeconds(duration: String): Long {
         val d = Duration.parse(duration)
         val seconds = d.seconds
         return seconds
     }
 
+    // Read from URL
     fun grabResult(url: URL): JSONObject {
         val urlConnection = url.openConnection()
         val reader = Scanner(
