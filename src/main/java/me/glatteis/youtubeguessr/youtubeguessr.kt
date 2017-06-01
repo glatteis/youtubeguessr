@@ -10,6 +10,10 @@ import java.util.concurrent.ConcurrentHashMap
 
 val testJsonArray = JSONArray()
 
+val testPrint = {
+    println("Logged JSON Array: $testJsonArray")
+}.invoke()
+
 val games = ConcurrentHashMap<String, Game>()
 val mustacheTemplateEngine = MustacheTemplateEngine()
 
