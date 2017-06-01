@@ -10,7 +10,7 @@ import java.util.*
 import java.util.concurrent.ConcurrentHashMap
 
 val games = ConcurrentHashMap<String, Game>()
-val mustacheTemplateEngine = MustacheTemplateEngine("/app/target/classes")
+val mustacheTemplateEngine = MustacheTemplateEngine("/app/target/classes/")
 
 private val randomStringGenerator = RandomStringGenerator(SecureRandom())
 
@@ -29,7 +29,6 @@ fun main(args: Array<String>) {
     port(port)
     webSocket("/gamesocket", GameWebSocketHandler)
     println(File(User::class.java.getResource("").path).absolutePath)
-    //staticFileLocation("/app/target/classes/")
     externalStaticFileLocation("/app/target/classes/")
 
     // Serve start.html as front page
