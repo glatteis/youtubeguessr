@@ -10,7 +10,7 @@ import java.util.*
 import java.util.concurrent.ConcurrentHashMap
 
 val games = ConcurrentHashMap<String, Game>()
-val mustacheTemplateEngine = MustacheTemplateEngine("app/target/classes/")
+val mustacheTemplateEngine = MustacheTemplateEngine()
 
 private val randomStringGenerator = RandomStringGenerator(SecureRandom())
 
@@ -33,7 +33,7 @@ fun main(args: Array<String>) {
 
     // Serve start.html as front page
     get("/", { _, _ ->
-        ModelAndView(null, "start.html")
+        ModelAndView(null, "app/target/classes/start.html")
     }, mustacheTemplateEngine)
     // Server create.html as game creation page
     get("/create", { _, _ ->
