@@ -8,12 +8,6 @@ import java.security.SecureRandom
 import java.util.*
 import java.util.concurrent.ConcurrentHashMap
 
-val testJsonArray = JSONArray()
-
-val testPrint = {
-    println("Logged JSON Array: $testJsonArray")
-}.invoke()
-
 val games = ConcurrentHashMap<String, Game>()
 val mustacheTemplateEngine = MustacheTemplateEngine()
 
@@ -23,10 +17,9 @@ private val randomStringGenerator = RandomStringGenerator(SecureRandom())
 
 // Represents in-game player
 data class User(val name: String, var points: Int)
+
 // Represents YouTube video
 data class Video(val id: String, val views: Int, val duration: Long)
-
-val filePrefix = "/target/classes/"
 
 fun main(args: Array<String>) {
     if (args.isEmpty()) throw IllegalArgumentException("Port has to be specified.")
@@ -34,13 +27,13 @@ fun main(args: Array<String>) {
     val port = portAsString.toInt()
     port(port)
     webSocket("/gamesocket", GameWebSocketHandler)
-    staticFileLocation("/")
+    staticFileLocation("classes/")
     // Serve start.html as front page
-    get("/", { request, response ->
-        ModelAndView(null, filePrefix + "start.html")
+    get("/", { _, _ ->
+        ModelAndView(null, "start.html")
     }, mustacheTemplateEngine)
     // Server create.html as game creation page
-    get("/create", { request, response ->
+    get("/create", { _, _ ->
         val attributes = HashMap<String, Any>()
         ModelAndView(attributes, "create_game.html")
     }, mustacheTemplateEngine)
@@ -88,7 +81,7 @@ fun main(args: Array<String>) {
         response.redirect("/game?id=" + id)
     })
     // Fetch a list of every game
-    get("/list", { request, response ->
+    get("/list", { _, _ ->
         // For every game: Get data if public
         val publicGames = games.values
                 .filter { it.isPublic }
@@ -122,7 +115,7 @@ fun main(args: Array<String>) {
         game.getGame(request, response)
     }, mustacheTemplateEngine)
     // Game will redirect to choose_name if user does not have a name yet.
-    get("/choose_name", { request, response ->
+    get("/choose_name", { request, _ ->
         // This is the game ID that the server will redirect to after choosing name
         val id: String? = request.queryParams("id")
         if (id == null) {
