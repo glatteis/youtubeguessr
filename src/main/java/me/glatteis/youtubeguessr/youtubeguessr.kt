@@ -4,6 +4,7 @@ import org.json.JSONArray
 import spark.ModelAndView
 import spark.Spark.*
 import spark.template.mustache.MustacheTemplateEngine
+import java.io.File
 import java.security.SecureRandom
 import java.util.*
 import java.util.concurrent.ConcurrentHashMap
@@ -27,7 +28,8 @@ fun main(args: Array<String>) {
     val port = portAsString.toInt()
     port(port)
     webSocket("/gamesocket", GameWebSocketHandler)
-    staticFileLocation("classes/")
+    println(File(User::class.java.getResource("").path).absolutePath)
+    staticFileLocation("/")
     // Serve start.html as front page
     get("/", { _, _ ->
         ModelAndView(null, "start.html")
