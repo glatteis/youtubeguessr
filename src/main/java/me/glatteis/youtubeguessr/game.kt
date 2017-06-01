@@ -225,6 +225,14 @@ class Game(val name: String, val id: String, val countdownTime: Int, val winPoin
 
             // If buffer compensation is over, play video for everyone that has buffered
             if (countdown == countdownTime) {
+                // If nobody has buffered, that's not great. Play the next video
+                if (readyUsers.isEmpty()) {
+                    this.cancel()
+                    isVideoPlaying = false
+                    if (games.contains(this@Game)) {
+                        postVideo()
+                    }
+                }
                 GameWebSocketHandler.sendToAll(readyUsers.filter { userSessions[it] != null }.map { userSessions[it]!! },
                         JSONObject(
                                 mapOf(
@@ -425,8 +433,8 @@ object GameWebSocketHandler {
             game.onJoin(session)
         } else {
             // If message is not "connect", send it for the game to handle
-            val game = games[sessions[session]?.gameId]
-            game ?: return
+            val gameId = sessions[session]?.gameId ?: return
+            val game = games[gameId ] ?: return
             game.message(jsonObject, session)
         }
     }
