@@ -10,7 +10,7 @@ import java.util.*
 import java.util.concurrent.ConcurrentHashMap
 
 val games = ConcurrentHashMap<String, Game>()
-val mustacheTemplateEngine = MustacheTemplateEngine("/app/target/classes/")
+val mustacheTemplateEngine = MustacheTemplateEngine("app/target/classes/")
 
 private val randomStringGenerator = RandomStringGenerator(SecureRandom())
 
