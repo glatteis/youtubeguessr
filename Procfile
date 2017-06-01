@@ -1,1 +1,1 @@
-web: java $JAVA_OPTS -cp target/classes/:target/dependency/* youtubeguessr-1.0-SNAPSHOT.jar $PORT
+web: java -cp target/classes/:target/dependency/* me.glatteis.youtubeguessr.YoutubeguessrKt $PORT
