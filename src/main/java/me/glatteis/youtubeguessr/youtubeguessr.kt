@@ -16,7 +16,9 @@ private val randomStringGenerator = RandomStringGenerator(SecureRandom())
 // Used data classes
 
 // Represents in-game player
-data class User(val name: String, var points: Int)
+data class User(val name: String, var points: Int) {
+    var afk = 0
+}
 
 // Represents YouTube video
 data class Video(val id: String, val views: Int, val duration: Long)
@@ -33,11 +35,12 @@ fun main(args: Array<String>) {
 
     if (args.size > 1) {
         filePrefix = args[1]
+        externalStaticFileLocation("/app/${args[1]}")
+    } else {
+        staticFileLocation("/")
     }
 
     environmentKey = System.getenv("YT_KEY")
-
-    externalStaticFileLocation("/app/target/classes/")
 
     // Serve start.html as front page
     get("/", { _, _ ->
@@ -115,12 +118,12 @@ fun main(args: Array<String>) {
     get("/game", { request, response ->
         val id = request.queryParams("id")
         if (id == null) {
-            halt("There's no game of that id.")
+            halt("You did not specify an id. <a href='/'>Back to youtubeguessr</a>")
             return@get null
         }
         val game = games[id]
         if (game == null) {
-            halt("There's no game of that id.")
+            halt("There's no game of that id. <a href='/'>Back to youtubeguessr</a>")
             return@get null
         }
         game.getGame(request, response)

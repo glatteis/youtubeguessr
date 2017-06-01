@@ -225,14 +225,6 @@ class Game(val name: String, val id: String, val countdownTime: Int, val winPoin
 
             // If buffer compensation is over, play video for everyone that has buffered
             if (countdown == countdownTime) {
-                // If nobody has buffered, that's not great. Play the next video
-                if (readyUsers.isEmpty()) {
-                    this.cancel()
-                    isVideoPlaying = false
-                    if (games.contains(this@Game)) {
-                        postVideo()
-                    }
-                }
                 GameWebSocketHandler.sendToAll(readyUsers.filter { userSessions[it] != null }.map { userSessions[it]!! },
                         JSONObject(
                                 mapOf(
@@ -252,6 +244,39 @@ class Game(val name: String, val id: String, val countdownTime: Int, val winPoin
                 // Time is over
                 // Cancel timer
                 this.cancel()
+
+                for ((u, _) in userSessions) {
+                    if (!guesses.containsKey(u)) {
+                        u.afk++
+                        val session = userSessions[u] ?: continue
+                        if (u.afk == 4) {
+                            GameWebSocketHandler.onClose(session, 0, "")
+                            GameWebSocketHandler.sendMessage(session, JSONObject(
+                                    mapOf(
+                                            Pair("type", "newVideo"),
+                                            Pair("url", ""),
+                                            Pair("duration", 0)
+                                    )
+                            ))
+                        }
+                        if (!session.isOpen) continue
+                        GameWebSocketHandler.sendMessage(session, JSONObject(
+                                mapOf(
+                                        Pair("type", "chatMessage"),
+                                        if (u.afk == 4) {
+                                            Pair("message", "You were kicked from the game because you were AFK for too" +
+                                                    "long.")
+                                        } else {
+                                            Pair("message", "You did not vote this round. If you are AFK for ${4 - u.afk} " +
+                                                    "more round(s), you will be kicked from the game.")
+                                        },
+                                        Pair("senderName", "youtubeguessr")
+                                )
+                        ))
+                    }
+
+                }
+
                 // If guesses are empty, continue with playing new video
                 if (guesses.isEmpty()) {
                     isVideoPlaying = false
@@ -361,7 +386,7 @@ object GameWebSocketHandler {
 
     @Suppress("UNUSED_PARAMETER")
     @OnWebSocketClose
-    fun onClose(session: JSession, c: Int, r: String) {
+    fun onClose(session: JSession, a: Int, b: String) {
         // Get data of that session
         val userSession = sessions[session] ?: return
         val game = games[userSession.gameId] ?: return
@@ -434,7 +459,7 @@ object GameWebSocketHandler {
         } else {
             // If message is not "connect", send it for the game to handle
             val gameId = sessions[session]?.gameId ?: return
-            val game = games[gameId ] ?: return
+            val game = games[gameId] ?: return
             game.message(jsonObject, session)
         }
     }
