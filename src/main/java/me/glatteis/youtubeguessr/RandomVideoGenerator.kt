@@ -42,7 +42,7 @@ object RandomVideoGenerator {
 
     // Load up key file with API key
     init {
-        val keyFile = File("key")
+        val keyFile = File(filePrefix + "key")
         val scanner = Scanner(keyFile.inputStream())
         var keyBuffer = ""
         while (scanner.hasNextLine()) {
