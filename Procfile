@@ -1,1 +1,1 @@
-web: java -cp target/classes/:target/dependency/* me.glatteis.youtubeguessr.YoutubeguessrKt $PORT
+web: java -cp target/classes/:target/dependency/*:src/main/resources me.glatteis.youtubeguessr.YoutubeguessrKt $PORT
