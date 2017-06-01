@@ -29,7 +29,7 @@ fun main(args: Array<String>) {
     port(port)
     webSocket("/gamesocket", GameWebSocketHandler)
     println(File(User::class.java.getResource("").path).absolutePath)
-    staticFileLocation("/app/target/")
+    staticFileLocation("app/target/classes/")
     // Serve start.html as front page
     get("/", { _, _ ->
         ModelAndView(null, "start.html")
