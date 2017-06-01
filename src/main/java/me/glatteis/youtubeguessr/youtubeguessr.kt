@@ -30,9 +30,10 @@ fun main(args: Array<String>) {
     webSocket("/gamesocket", GameWebSocketHandler)
     println(File(User::class.java.getResource("").path).absolutePath)
     staticFileLocation("/app/target/classes/")
+    externalStaticFileLocation("/app/target/classes/")
     // Serve start.html as front page
     get("/", { _, _ ->
-        ModelAndView(null, "/app/target/classes/start.html")
+        ModelAndView(null, "start.html")
     }, mustacheTemplateEngine)
     // Server create.html as game creation page
     get("/create", { _, _ ->
