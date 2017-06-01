@@ -42,14 +42,18 @@ object RandomVideoGenerator {
 
     // Load up key file with API key
     init {
-        val keyFile = File(filePrefix + "key")
-        val scanner = Scanner(keyFile.inputStream())
-        var keyBuffer = ""
-        while (scanner.hasNextLine()) {
-            keyBuffer += scanner.nextLine()
+        if (environmentKey == null) {
+            val keyFile = File(filePrefix + "key")
+            val scanner = Scanner(keyFile.inputStream())
+            var keyBuffer = ""
+            while (scanner.hasNextLine()) {
+                keyBuffer += scanner.nextLine()
+            }
+            scanner.close()
+            key = "&key=$keyBuffer"
+        } else {
+            key = "&key=$environmentKey"
         }
-        scanner.close()
-        key = "&key=$keyBuffer"
     }
 
     // Amount of chars in search query

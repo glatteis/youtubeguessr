@@ -4,7 +4,6 @@ import org.json.JSONArray
 import spark.ModelAndView
 import spark.Spark.*
 import spark.template.mustache.MustacheTemplateEngine
-import java.io.File
 import java.security.SecureRandom
 import java.util.*
 import java.util.concurrent.ConcurrentHashMap
@@ -23,6 +22,7 @@ data class User(val name: String, var points: Int)
 data class Video(val id: String, val views: Int, val duration: Long)
 
 var filePrefix: String = ""
+var environmentKey: String? = null
 
 fun main(args: Array<String>) {
     if (args.isEmpty()) throw IllegalArgumentException("Port has to be specified.")
@@ -34,6 +34,8 @@ fun main(args: Array<String>) {
     if (args.size > 1) {
         filePrefix = args[1]
     }
+
+    environmentKey = System.getenv("YT_KEY")
 
     externalStaticFileLocation("/app/target/classes/")
 
