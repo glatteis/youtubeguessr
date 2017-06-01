@@ -32,7 +32,7 @@ fun main(args: Array<String>) {
     staticFileLocation("/app/target/classes/")
     // Serve start.html as front page
     get("/", { _, _ ->
-        ModelAndView(null, "start.html")
+        ModelAndView(null, "/app/target/classes/start.html")
     }, mustacheTemplateEngine)
     // Server create.html as game creation page
     get("/create", { _, _ ->
