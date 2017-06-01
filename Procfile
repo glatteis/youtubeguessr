@@ -1,1 +1,1 @@
-web: java -jar target/youtubeguessr.jar $PORT
+web: java -jar target/classes/youtubeguessr.jar $PORT
