@@ -8,6 +8,8 @@ import java.security.SecureRandom
 import java.util.*
 import java.util.concurrent.ConcurrentHashMap
 
+val testJsonArray = JSONArray()
+
 val games = ConcurrentHashMap<String, Game>()
 val mustacheTemplateEngine = MustacheTemplateEngine()
 
