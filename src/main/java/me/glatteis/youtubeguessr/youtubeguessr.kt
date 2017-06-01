@@ -26,6 +26,8 @@ data class User(val name: String, var points: Int)
 // Represents YouTube video
 data class Video(val id: String, val views: Int, val duration: Long)
 
+val filePrefix = "/classes/"
+
 fun main(args: Array<String>) {
     if (args.isEmpty()) throw IllegalArgumentException("Port has to be specified.")
     val portAsString = args[0]
@@ -35,7 +37,7 @@ fun main(args: Array<String>) {
     staticFileLocation("/")
     // Serve start.html as front page
     get("/", { request, response ->
-        ModelAndView(null, "start.html")
+        ModelAndView(null, filePrefix + "start.html")
     }, mustacheTemplateEngine)
     // Server create.html as game creation page
     get("/create", { request, response ->
