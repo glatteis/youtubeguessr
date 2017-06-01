@@ -33,7 +33,7 @@ fun main(args: Array<String>) {
 
     // Serve start.html as front page
     get("/", { _, _ ->
-        ModelAndView(null, "app/target/classes/start.html")
+        ModelAndView(null, "target/classes/start.html")
     }, mustacheTemplateEngine)
     // Server create.html as game creation page
     get("/create", { _, _ ->
