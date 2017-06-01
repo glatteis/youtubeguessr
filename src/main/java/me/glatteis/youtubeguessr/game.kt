@@ -88,7 +88,7 @@ class Game(val name: String, val id: String, val countdownTime: Int, val winPoin
                 Pair("points_to_win", winPoints)
         )
         request.session().attribute("redirect_id", id)
-        return ModelAndView(attributes, "game.html")
+        return ModelAndView(attributes, filePrefix + "game.html")
     }
 
     // If video is playing

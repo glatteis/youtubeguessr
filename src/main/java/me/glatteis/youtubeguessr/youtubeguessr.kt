@@ -10,7 +10,7 @@ import java.util.*
 import java.util.concurrent.ConcurrentHashMap
 
 val games = ConcurrentHashMap<String, Game>()
-val mustacheTemplateEngine = MustacheTemplateEngine("target/classes/")
+val mustacheTemplateEngine = MustacheTemplateEngine()
 
 private val randomStringGenerator = RandomStringGenerator(SecureRandom())
 
@@ -22,23 +22,29 @@ data class User(val name: String, var points: Int)
 // Represents YouTube video
 data class Video(val id: String, val views: Int, val duration: Long)
 
+var filePrefix: String = ""
+
 fun main(args: Array<String>) {
     if (args.isEmpty()) throw IllegalArgumentException("Port has to be specified.")
     val portAsString = args[0]
     val port = portAsString.toInt()
     port(port)
     webSocket("/gamesocket", GameWebSocketHandler)
-    println(File(User::class.java.getResource("").path).absolutePath)
+
+    if (args.size > 1) {
+        filePrefix = args[1]
+    }
+
     externalStaticFileLocation("/app/target/classes/")
 
     // Serve start.html as front page
     get("/", { _, _ ->
-        ModelAndView(null, "start.html")
+        ModelAndView(null, filePrefix + "start.html")
     }, mustacheTemplateEngine)
     // Server create.html as game creation page
     get("/create", { _, _ ->
         val attributes = HashMap<String, Any>()
-        ModelAndView(attributes, "create_game.html")
+        ModelAndView(attributes, filePrefix + "create_game.html")
     }, mustacheTemplateEngine)
     // Create a game
     post("/create", { request, response ->
@@ -101,7 +107,7 @@ fun main(args: Array<String>) {
         // Pass to JS on page as attribute, script will build table
         val attributes = HashMap<String, Any>()
         attributes["games"] = JSONArray(publicGames)
-        ModelAndView(attributes, "list_names.html")
+        ModelAndView(attributes, filePrefix + "list_names.html")
     }, mustacheTemplateEngine)
     // Given an ID, return response of game
     get("/game", { request, response ->
@@ -127,7 +133,7 @@ fun main(args: Array<String>) {
         }
         request.session().attribute("redirect_id", id)
         val attributes = HashMap<String, Any>()
-        ModelAndView(attributes, "choose_name.html")
+        ModelAndView(attributes, filePrefix + "choose_name.html")
     }, mustacheTemplateEngine)
     // After choosing a name, data will end up in session
     post("/choose_name", { request, response ->
