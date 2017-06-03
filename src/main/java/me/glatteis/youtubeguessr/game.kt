@@ -225,7 +225,7 @@ class Game(val name: String, val id: String, val countdownTime: Int, val winPoin
 
             // If buffer compensation is over, play video for everyone that has buffered
             if (countdown == countdownTime) {
-                GameWebSocketHandler.sendToAll(readyUsers.filter { userSessions[it] != null }.map { userSessions[it]!! },
+                GameWebSocketHandler.sendToAll(userSessions.values,
                         JSONObject(
                                 mapOf(
                                         Pair("type", "startVideo"),
