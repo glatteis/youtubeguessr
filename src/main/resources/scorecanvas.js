@@ -7,7 +7,8 @@ function drawCanvas(guesses, actualViews, winners) {
     Object.keys(guesses).forEach(function (username) {
         standardDeviationHelper += Math.pow((actualViews - guesses[username]), 2);
     });
-    var standardDeviation = Math.sqrt(standardDeviationHelper / Object.keys(guesses).length);
+    var standardDeviation = Math.max(
+        Math.sqrt(standardDeviationHelper / Object.keys(guesses).length));
 
     var min = actualViews + standardDeviation;
     var max = actualViews - standardDeviation;

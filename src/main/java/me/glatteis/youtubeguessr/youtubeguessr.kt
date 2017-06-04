@@ -18,6 +18,7 @@ private val randomStringGenerator = RandomStringGenerator(SecureRandom())
 // Represents in-game player
 data class User(val name: String, var points: Int) {
     var afk = 0
+    var hasGuessed = false
 }
 
 // Represents YouTube video
@@ -59,9 +60,11 @@ fun main(args: Array<String>) {
         val timeAsString = request.queryParams("countdown_time")
         val pointsToWinAsString = request.queryParams("points_to_win")
         val publicAsString = request.queryParams("public")
+        val chillModeAsString = request.queryParams("chill_mode")
         val pointsForExactGuessesAsString = request.queryParams("points_for_exact_guesses") ?: "1"
         // A public game will be visible from the game browser
         val isPublic = (publicAsString == "on")
+        val isChillMode = (chillModeAsString == "on")
         // Check for invalid data
         if (gameName == null || gameName.isBlank() || username == null || username.isBlank() || timeAsString == null ||
                 timeAsString.isBlank() || username.length > 16 || gameName.length > 16) {
@@ -87,7 +90,8 @@ fun main(args: Array<String>) {
             id = randomStringGenerator.randomString(8)
         } while (games.containsKey(id))
         // Create game instance
-        val game = Game(gameName, id, time, pointsToWin, isPublic, pointsForExactGuesses)
+        val game = Game(gameName, id, if (isChillMode) 0 else time, isChillMode, pointsToWin, isPublic,
+                pointsForExactGuesses)
         games.put(id, game)
         // Add username to session
         request.session(true).attribute("username", username)
@@ -105,14 +109,15 @@ fun main(args: Array<String>) {
                             Pair("players", it.userSessions.size),
                             Pair("pointsToWin", it.winPoints),
                             Pair("countdownTime", it.countdownTime),
-                            Pair("isVideoPlaying", it.isVideoPlaying),
+                            Pair("hasStarted", it.isVideoPlaying),
+                            Pair("isChillMode", it.isChillMode),
                             Pair("id", it.id)
                     )
                 }
         // Pass to JS on page as attribute, script will build table
         val attributes = HashMap<String, Any>()
         attributes["games"] = JSONArray(publicGames)
-        ModelAndView(attributes, filePrefix + "list_names.html")
+        ModelAndView(attributes, filePrefix + "list_games.html")
     }, mustacheTemplateEngine)
     // Given an ID, return response of game
     get("/game", { request, response ->

@@ -17,8 +17,8 @@ import org.eclipse.jetty.websocket.api.Session as JSession
 /**
  * Created by Linus on 19.03.2017!
  */
-class Game(val name: String, val id: String, val countdownTime: Int, val winPoints: Int?, val isPublic: Boolean,
-           val pointsForExactAnswers: Int) {
+class Game(val name: String, val id: String, val countdownTime: Int, val isChillMode: Boolean, val winPoints: Int?,
+           val isPublic: Boolean, val pointsForExactAnswers: Int) {
 
     /*
     An instance of this class represents a running game.
@@ -40,14 +40,23 @@ class Game(val name: String, val id: String, val countdownTime: Int, val winPoin
 
     val guesses = ConcurrentHashMap<User, Int>()
 
+    val keepAliveResponses = ConcurrentHashMap<JSession, Long>()
+
     init {
         // Timer that looks for closed sockets every 10 seconds
         timer(daemon = true, initialDelay = 10000, period = 10000) {
             //Close & remove all sessions that are not open anymore
             val toRemove = HashSet<User>()
             for ((u, s) in userSessions) {
-                if (!s.isOpen) {
+                if (!s.isOpen || System.currentTimeMillis() - (keepAliveResponses[s] ?:
+                        System.currentTimeMillis() + 20000) >= 20000) {
                     toRemove.add(u)
+                } else {
+                    GameWebSocketHandler.sendMessage(s, JSONObject(
+                            mapOf(
+                                  Pair("type", "keepAlive")
+                            )
+                    ))
                 }
             }
             for (u in toRemove) {
@@ -85,7 +94,8 @@ class Game(val name: String, val id: String, val countdownTime: Int, val winPoin
                 Pair("username", username),
                 Pair("game_name", name),
                 Pair("game_id", id),
-                Pair("points_to_win", winPoints)
+                Pair("points_to_win", winPoints),
+                Pair("chillMode", isChillMode)
         )
         request.session().attribute("redirect_id", id)
         return ModelAndView(attributes, filePrefix + "game.html")
@@ -102,7 +112,10 @@ class Game(val name: String, val id: String, val countdownTime: Int, val winPoin
     val readyUsers = ArrayList<User>()
 
     fun message(message: JSONObject, session: JSession) {
-        if (message.get("type") == "start") {
+        if (message.get("type") == "keepAlive") {
+            keepAliveResponses[session] = System.currentTimeMillis()
+            println("Got keepAlive from ${getUserBySession(session)}")
+        } else if (message.get("type") == "start") {
             // Someone has pressed the start button
             postVideo()
         } else if (message.get("type") == "guess") {
@@ -121,7 +134,16 @@ class Game(val name: String, val id: String, val countdownTime: Int, val winPoin
             if (views < 0) return
 
             // Put into guesses map
-            guesses.put(getUserBySession(session) ?: return, views)
+            val user = getUserBySession(session) ?: return
+            guesses.put(user, views)
+            user.hasGuessed = true
+
+            // Update users
+            GameWebSocketHandler.sendToAll(userSessions.values, JSONObject(
+                    mapOf(
+                            Pair("users", userSessions.keys)
+                    )
+            ))
         } else if (message.get("type") == "chatMessage") {
             // Scoop out user, message
             val user = getUserBySession(session) ?: return
@@ -199,6 +221,14 @@ class Game(val name: String, val id: String, val countdownTime: Int, val winPoin
         isVideoPlaying = true
         // Clear previous guesses
         guesses.clear()
+        for ((u, _) in userSessions) {
+            u.hasGuessed = false
+        }
+        GameWebSocketHandler.sendToAll(userSessions.values, JSONObject(
+                mapOf(
+                        Pair("users", userSessions.keys)
+                )
+        ))
         // Clear ready users
         readyUsers.clear()
         // Get a video from the video generator
@@ -233,14 +263,32 @@ class Game(val name: String, val id: String, val countdownTime: Int, val winPoin
                                 )
                         ))
             }
-            // Update countdown for everyone
-            GameWebSocketHandler.sendToAll(userSessions.values, JSONObject(
-                    mapOf(
-                            Pair("type", "updateCountdown"),
-                            Pair("countdown", countdown)
-                    )
-            ))
-            if (countdown == 0) {
+
+            if (isChillMode) {
+                // Set countdown blank
+                GameWebSocketHandler.sendToAll(userSessions.values, JSONObject(
+                        mapOf(
+                                Pair("type", "updateCountdown"),
+                                Pair("countdown", "")
+                        )
+                ))
+            } else {
+                // Update countdown for everyone
+                GameWebSocketHandler.sendToAll(userSessions.values, JSONObject(
+                        mapOf(
+                                Pair("type", "updateCountdown"),
+                                Pair("countdown", countdown)
+                        )
+                ))
+            }
+
+            // Chill Mode Self Delete
+            if (isChillMode && countdown <= -1000) {
+                this.cancel()
+                games.remove(id)
+            }
+
+            if (!isChillMode && countdown == 0 || isChillMode && guesses.size >= userSessions.size) {
                 // Time is over
                 // Cancel timer
                 this.cancel()

@@ -22,6 +22,7 @@
                     <th>Points to Win</th>
                     <th>Countdown Time</th>
                     <th>Has Started</th>
+                    <th>Chill Mode (no countdowns)</th>
                 </tr>
                 </thead>
                 <tbody>
@@ -46,7 +47,7 @@
             ((game.pointsToWin === undefined) ? "-" : game.pointsToWin) +
             "</td><td>" + game.countdownTime + "</td><td>" + (
                 game.hasStarted ? "Yes" : "No"
-            ) + "</td></tr>");
+            ) + "</td><td>" + (game.isChillMode ? "Yes" : "No") + "</td></tr>");
     }
 </script>
 </html>

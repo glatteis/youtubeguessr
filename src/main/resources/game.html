@@ -54,6 +54,8 @@
                 </div>
             </form>
             <br>
+            <b id="chill_mode_text">Chill Mode (no countdowns)</b>
+            <br>
             <b id="points_to_win_text">{{points_to_win}} points to win</b>
             <table id="user_table" class="table"> <!-- User Overview !-->
             </table>
@@ -115,6 +117,11 @@
     var webSocket;
     var player;
     var videoNew = true;
+    var isChillMode = "{{chillMode}}";
+    if (isChillMode === "false") {
+        $("#chill_mode_text").hide();
+    }
+
     window.onYouTubeIframeAPIReady = function () {
         player = new YT.Player("video", {
             width: "864",
@@ -149,25 +156,35 @@
         });
     };
 
+    function updateHtmlUserTable(users) {
+        const htmlUserTable = $("#user_table")[0];
+        htmlUserTable.innerHTML = "<thead><tr><th>name</th><th>#</th></tr></thead>";
+        users.sort(function(a, b) {
+           return b.points - a.points
+        });
+        for (var i = 0; i < users.length; i++) {
+            const user = users[i];
+            var name = user.name;
+            if (name === username) {
+                name += " *";
+            }
+            htmlUserTable.innerHTML += "<tr><td>" + name + (user.hasGuessed ? " (g)" : "") + "</td><td>" + user.points.toString() + "</td></tr>";
+        }
+    }
+
     function webSocketOnMessage(message) {
         var data = JSON.parse(message.data);
         if (data.username !== undefined) {
             username = data.username;
         }
         if (data.users !== undefined) {
-            const users = data.users;
-            const userTable = $("#user_table")[0];
-            userTable.innerHTML = "<thead><tr><th>name</th><th>#</th></tr></thead>";
-            for (var i = 0; i < users.length; i++) {
-                const user = users[i];
-                var name = user.name;
-                if (name === username) {
-                    name += " *";
-                }
-                userTable.innerHTML += "<tr><td>" + name + "</td><td>" + user.points.toString() + "</td></tr>";
-            }
+            updateHtmlUserTable(data.users);
         }
-        if (data.type === "newVideo") {
+        if (data.type === "keepAlive") {
+            webSocket.send(JSON.stringify(
+                {"type": "keepAlive"}
+            ))
+        } else if (data.type === "newVideo") {
             videoNew = true;
             $("#current_guess")[0].innerHTML = "";
             $("#results").hide();
@@ -183,6 +200,7 @@
                 secondsString = seconds.toString();
             }
             $("#duration_label")[0].innerHTML = minutes + ":" + secondsString;
+            $("#countdown_label")[0].innerHTML = "buffering...";
             var url = data.url;
             if (url !== null) {
                 player.loadVideoById(url, 0, "large");
