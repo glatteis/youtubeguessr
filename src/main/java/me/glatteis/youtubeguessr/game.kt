@@ -46,12 +46,12 @@ class Game(val name: String, val id: String, val countdownTime: Int, val isChill
         // Timer that looks for closed sockets every 10 seconds
         timer(daemon = true, initialDelay = 10000, period = 10000) {
             //Close & remove all sessions that are not open anymore
-            val toRemove = HashSet<User>()
+            val toRemove = HashSet<Pair<User, JSession>>()
             for ((u, s) in userSessions) {
                 println("${s.isOpen} ${keepAliveResponses[s]}")
                 if (!s.isOpen || System.currentTimeMillis() - (keepAliveResponses[s] ?:
-                        System.currentTimeMillis() + 20000) >= 20000) {
-                    toRemove.add(u)
+                        System.currentTimeMillis()) >= 20000) {
+                    toRemove.add(Pair(u, s))
                 } else {
                     GameWebSocketHandler.sendMessage(s, JSONObject(
                             mapOf(
@@ -60,9 +60,14 @@ class Game(val name: String, val id: String, val countdownTime: Int, val isChill
                     ))
                 }
             }
-            for (u in toRemove) {
-                userSessions[u]?.close()
+            for ((u, s) in toRemove) {
+                println("Removing $u")
+                if (s.isOpen) s.close()
                 userSessions.remove(u)
+                println(userSessions.keys)
+                guesses.remove(u)
+                keepAliveResponses.remove(s)
+                readyUsers.remove(u)
             }
 
             if (userSessions.isEmpty()) {
