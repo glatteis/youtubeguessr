@@ -48,6 +48,7 @@ class Game(val name: String, val id: String, val countdownTime: Int, val isChill
             //Close & remove all sessions that are not open anymore
             val toRemove = HashSet<User>()
             for ((u, s) in userSessions) {
+                println("${s.isOpen} ${keepAliveResponses[s]}")
                 if (!s.isOpen || System.currentTimeMillis() - (keepAliveResponses[s] ?:
                         System.currentTimeMillis() + 20000) >= 20000) {
                     toRemove.add(u)
@@ -114,7 +115,6 @@ class Game(val name: String, val id: String, val countdownTime: Int, val isChill
     fun message(message: JSONObject, session: JSession) {
         if (message.get("type") == "keepAlive") {
             keepAliveResponses[session] = System.currentTimeMillis()
-            println("Got keepAlive from ${getUserBySession(session)}")
         } else if (message.get("type") == "start") {
             // Someone has pressed the start button
             postVideo()
@@ -288,7 +288,7 @@ class Game(val name: String, val id: String, val countdownTime: Int, val isChill
                 games.remove(id)
             }
 
-            if (!isChillMode && countdown == 0 || isChillMode && guesses.size >= userSessions.size) {
+            if ((!isChillMode && countdown == 0) || guesses.size >= userSessions.size) {
                 // Time is over
                 // Cancel timer
                 this.cancel()

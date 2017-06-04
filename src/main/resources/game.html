@@ -122,7 +122,13 @@
         $("#chill_mode_text").hide();
     }
 
+    const welcomeText = "Hi " + username + ", welcome to youtubeguessr! Guess the amount of views every video has and " +
+        "write your answer into the field below. The closest answer will be awarded with a point, if your answer is exact, " +
+        "you get more points.\n" + (isChillMode ? "This game is on chill mode, meaning that the game ends when everyone " +
+            "has guessed. No countdowns." : "On this game, there's a countdown. Guess before it ends!");
+
     window.onYouTubeIframeAPIReady = function () {
+        appendChatMessage("youtubeguessr", welcomeText);
         player = new YT.Player("video", {
             width: "864",
             height: "576",
