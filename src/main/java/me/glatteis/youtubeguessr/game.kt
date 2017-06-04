@@ -40,24 +40,14 @@ class Game(val name: String, val id: String, val countdownTime: Int, val isChill
 
     val guesses = ConcurrentHashMap<User, Int>()
 
-    val keepAliveResponses = ConcurrentHashMap<JSession, Long>()
-
     init {
         // Timer that looks for closed sockets every 10 seconds
         timer(daemon = true, initialDelay = 10000, period = 10000) {
             //Close & remove all sessions that are not open anymore
             val toRemove = HashSet<Pair<User, JSession>>()
             for ((u, s) in userSessions) {
-                println("${s.isOpen} ${keepAliveResponses[s]}")
-                if (!s.isOpen || System.currentTimeMillis() - (keepAliveResponses[s] ?:
-                        System.currentTimeMillis()) >= 20000) {
+                if (!s.isOpen) {
                     toRemove.add(Pair(u, s))
-                } else {
-                    GameWebSocketHandler.sendMessage(s, JSONObject(
-                            mapOf(
-                                  Pair("type", "keepAlive")
-                            )
-                    ))
                 }
             }
             for ((u, s) in toRemove) {
@@ -66,7 +56,6 @@ class Game(val name: String, val id: String, val countdownTime: Int, val isChill
                 userSessions.remove(u)
                 println(userSessions.keys)
                 guesses.remove(u)
-                keepAliveResponses.remove(s)
                 readyUsers.remove(u)
             }
 
@@ -118,9 +107,7 @@ class Game(val name: String, val id: String, val countdownTime: Int, val isChill
     val readyUsers = ArrayList<User>()
 
     fun message(message: JSONObject, session: JSession) {
-        if (message.get("type") == "keepAlive") {
-            keepAliveResponses[session] = System.currentTimeMillis()
-        } else if (message.get("type") == "start") {
+        if (message.get("type") == "start") {
             // Someone has pressed the start button
             postVideo()
         } else if (message.get("type") == "guess") {
@@ -326,6 +313,13 @@ class Game(val name: String, val id: String, val countdownTime: Int, val isChill
                                         Pair("senderName", "youtubeguessr")
                                 )
                         ))
+                        if (u.afk == 4) {
+                            GameWebSocketHandler.sendMessage(session, JSONObject(
+                                    mapOf(
+                                            Pair("type", "kick ")
+                                    )
+                            ))
+                        }
                     }
 
                 }
@@ -394,9 +388,9 @@ class Game(val name: String, val id: String, val countdownTime: Int, val isChill
                 if (winPoints != null) {
                     // Scoop up winners
                     val winners = ArrayList<String>()
-                    for ((name, points) in userSessions.keys) {
-                        if (points >= winPoints) {
-                            winners.add(name)
+                    for (u in userSessions.keys) {
+                        if (u.points >= winPoints) {
+                            winners.add(u.name)
                         }
                     }
                     if (winners.isNotEmpty()) {

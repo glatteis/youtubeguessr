@@ -190,11 +190,7 @@
         if (data.users !== undefined) {
             updateHtmlUserTable(data.users);
         }
-        if (data.type === "keepAlive") {
-            webSocket.send(JSON.stringify(
-                {"type": "keepAlive"}
-            ))
-        } else if (data.type === "newVideo") {
+        if (data.type === "newVideo") {
             videoNew = true;
             $("#current_guess")[0].innerHTML = "";
             $("#results").hide();
@@ -246,6 +242,8 @@
             player.playVideo();
         } else if (data.type === "gameEnd") {
             player.stop();
+        } else if (data.type === "kick") {
+            document.location.href = "/";
         }
     }
 

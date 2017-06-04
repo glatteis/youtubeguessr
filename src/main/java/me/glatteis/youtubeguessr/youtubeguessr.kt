@@ -16,9 +16,26 @@ private val randomStringGenerator = RandomStringGenerator(SecureRandom())
 // Used data classes
 
 // Represents in-game player
-data class User(val name: String, var points: Int) {
+class User(val name: String, var points: Int) {
     var afk = 0
     var hasGuessed = false
+
+
+    override fun equals(other: Any?): Boolean {
+        if (this === other) return true
+        if (other?.javaClass != javaClass) return false
+
+        other as User
+
+        if (name != other.name) return false
+
+        return true
+    }
+
+    override fun hashCode(): Int {
+        return name.hashCode()
+    }
+
 }
 
 // Represents YouTube video
