@@ -154,7 +154,12 @@
                     }
                 },
                 onReady: function () {
-                    webSocket = new WebSocket("ws://" + location.hostname + ":" + location.port + "/gamesocket");
+                    var websocketProtocol = "wss";
+                    if (location.protocol !== "https:") {
+                        websocketProtocol = "ws";
+                    }
+                    webSocket = new WebSocket(websocketProtocol +
+                        "://" + location.hostname + ":" + location.port + "/gamesocket");
                     webSocket.onopen = function () {
                         webSocket.send(JSON.stringify(
                             {type: "connect", id: id, username: username}
