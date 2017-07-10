@@ -86,12 +86,12 @@ function drawCanvas(guesses, actualViews, winners) {
         context.font = "15px Arial";
         context.textAlign = "left";
         if (cutOffLeft !== "") {
-            context.fillText("<- " + cutOffLeft.substr(0, cutOffLeft.length - 1), 0, 50);
+            context.fillText("← " + cutOffLeft.substr(0, cutOffLeft.length - 1), 0, 50);
         }
 
         context.textAlign = "right";
         if (cutOffRight !== "") {
-            context.fillText(cutOffRight.substr(0, cutOffRight.length - 1) + " ->", w, 50);
+            context.fillText(cutOffRight.substr(0, cutOffRight.length - 1) + " →", w, 50);
         }
     }
 }

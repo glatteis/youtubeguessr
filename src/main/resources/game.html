@@ -42,9 +42,7 @@
     <div class="row">
         <div class="col-sm-3">
             <!-- Chat Window !-->
-            <div id="chat_window" style="height: 400px; overflow: scroll;">
-
-            </div>
+            <div id="chat_window" style="height: 400px; overflow: scroll;"></div>
             <br>
             <form action="javascript:;" onsubmit="chatSubmitted()" class="form-inline">  <!-- Chat Overview !-->
                 <div class="input-group">
@@ -86,21 +84,23 @@
                         </div>
                     </form>
                 </div>
+                <div class="col-md-2">
+                    <h4 id="current_guess" style="color: #2c4b8f;"></h4>
+                </div>
                 <div class="col-md-1">
                     <h4 id="duration_label"></h4>
                 </div>
                 <div class="col-sm-1">
                     <h4 id="countdown_label"></h4>
                 </div>
-                <div class="col-md-4">
-                    <h4 id="current_guess"></h4>
+                <div class="col-md-2" hidden="hidden" id="go_to_video">
+                    <!-- Hey there. I know you are able to cheat, and I can't prevent that.
+                    Please don't though, it ruins the fun for everybody, including you. !-->
+                    <button id="open_button" onclick="" class="btn btn-primary">Go to video</button>
                 </div>
                 <div id="results" hidden="hidden">
                     <canvas id="score_canvas" width="810" height="200"></canvas>
                     <table class="table" id="guess-table"></table>
-                    <!-- Hey there. I know you are able to cheat, and I can't prevent that.
-                    Please don't though, it ruins the fun for everybody, including you. !-->
-                    <button id="open_button" onclick="" class="btn btn-primary">Go to video on YouTube</button>
                 </div>
             </div>
         </div>
@@ -125,14 +125,22 @@
     if (isChillMode === "false") {
         $("#chill_mode_text").hide();
     }
+    var isPublic = "{{isPublic}}";
 
-    const welcomeText = "Hi " + username + ", welcome to youtubeguessr! Guess the amount of views every video has and " +
+    var welcomeText = "Hi " + username + ", welcome to youtubeguessr! Guess the amount of views every video has and " +
         "write your answer into the field below. The closest answer will be awarded with a point, if your answer is exact, " +
-        "you get more points.\n" + (isChillMode ? "This game is on chill mode, meaning that the game ends when everyone " +
-            "has guessed. No countdowns." : "On this game, there's a countdown. Guess before it ends!");
+        "you get more points.\n";
+    if (isChillMode === "true") {
+        welcomeText += "This game is on chill mode, meaning that the game ends when everyone has guessed. No countdowns.";
+    } else if (isChillMode === "false") {
+        welcomeText += "On this game, there's a countdown. Guess before it ends!";
+    }
 
     window.onYouTubeIframeAPIReady = function () {
         appendChatMessage("youtubeguessr", welcomeText);
+        if (isPublic === "false") {
+            appendChatMessage("youtubeguessr", "<b>Share the link in the URL box with your friends.</b>")
+        }
         player = new YT.Player("video", {
             width: "864",
             height: "576",
@@ -174,8 +182,8 @@
     function updateHtmlUserTable(users) {
         const htmlUserTable = $("#user_table")[0];
         htmlUserTable.innerHTML = "<thead><tr><th>name</th><th>#</th></tr></thead>";
-        users.sort(function(a, b) {
-           return b.points - a.points
+        users.sort(function (a, b) {
+            return b.points - a.points
         });
         for (var i = 0; i < users.length; i++) {
             const user = users[i];
@@ -197,8 +205,9 @@
         }
         if (data.type === "newVideo") {
             videoNew = true;
-            $("#current_guess")[0].innerHTML = "";
+            $("#current_guess")[0].innerHTML = "No guess";
             $("#results").hide();
+            $("#go_to_video").hide();
             $("#start_button").hide();
             $("#guess_form").show();
             const time = data.duration;
@@ -221,6 +230,7 @@
             $("#countdown_label")[0].innerHTML = data.countdown.toString();
         } else if (data.type === "score") {
             $("#results").show();
+            $("#go_to_video").show();
             drawCanvas(data.guesses, data.viewcount, data.closestUsers);
             const guesses = data.guesses;
             const guessTable = $("#guess-table")[0];
@@ -255,7 +265,7 @@
     function appendChatMessage(username, chatMessage) {
         const $chatWindow = $("#chat_window");
         const chatWindow = $chatWindow[0];
-        chatWindow.innerHTML += username + ": " + chatMessage + "<br>";
+        chatWindow.innerHTML += "<span>" + username + ": " + chatMessage + "</span><br>";
         chatWindow.scrollTop = chatWindow.scrollHeight;
     }
 
@@ -272,7 +282,7 @@
         webSocket.send(JSON.stringify(
             {"type": "guess", "views": views}
         ));
-        $("#current_guess")[0].innerHTML = "Current: " + views.toString();
+        $("#current_guess")[0].innerHTML = views.toString();
     }
 
     function chatSubmitted() {

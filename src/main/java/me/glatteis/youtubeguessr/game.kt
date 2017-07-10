@@ -90,7 +90,8 @@ class Game(val name: String, val id: String, val countdownTime: Int, val isChill
                 Pair("game_name", name),
                 Pair("game_id", id),
                 Pair("points_to_win", winPoints),
-                Pair("chillMode", isChillMode)
+                Pair("chillMode", isChillMode),
+                Pair("isPublic", isPublic)
         )
         request.session().attribute("redirect_id", id)
         return ModelAndView(attributes, filePrefix + "game.html")
